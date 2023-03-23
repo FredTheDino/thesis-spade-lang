@@ -3,6 +3,8 @@ sources: self-validated-numerical-methods-and-applications, course on static ana
 # Affine and Interval Arithmetic
 Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. A combination of these methods is what is considered state of the art today.
+
 ## Interval Arithmetic
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider `x = random_real()`, where `random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
 
@@ -14,6 +16,7 @@ When doing static program analysis, some extra values are often defined. For exa
 The empty interval is also defined, $[]$. This interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
 
 <!-- Should I write this as latex directly instead? -->
+<!-- Should I even bother with this since this is already written in the original document? -->
 ### Interval. Definition
 An interval is denoted, in this thesis, using square brackets, $[a, b]$ where $a \leq b$.
 
@@ -54,4 +57,17 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 
 This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic doesn't reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. But this limitation leads us to affine arithmetic, which lets us reason more about the expressions we evaluate.
 
+## Affine Arithmetic
+Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances and a combination is currently thought to be the current state of the art. 
+
+### How Affine Arithmetic works
+In affine arithmetic there's a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic.
+
+Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that.
+
+## Error Explosion
+
+Both AA and IA accumulate error in order to over estimate. If this error gets too large, the estimations become worse. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+
 <!-- TODO: Error explosion, this topic probably needs to be covered, but maybe cover them for both? -->
+
