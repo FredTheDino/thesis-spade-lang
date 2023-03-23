@@ -1,16 +1,15 @@
 # Plan for Master Thesis
 
-# Preliminary title
-Using overestimation to optimize FPGA designs in Spade
+## Preliminary title: Using overestimation to optimize FPGA designs in Spade
 
-# Preliminary problem statement relating to suggested literature
+## Preliminary problem statement relating to suggested literature
  - Can IA and AA be used to optimize FPGA designs?
  - Can a programming language automatically optimize the memory usage of FPGAs?
 
-# Preliminary description of method and scientific approach
+## Preliminary description of method and scientific approach
 Change the Spade compiler to reason about the ranges of variables instead of number of bytes. We can then observe the footprint of the designs with and without this optimization. If this isn't enough content we can take the analysis even further. Thus we have an experiment that we can run, showing it's applicable to different kinds of "programs". Implementing IA and AA to overestimate additions and such should then be used to correctly calculate the word-length of functions and entities.
 
-# Planned literature supporting the thesis
+## Planned literature supporting the thesis
   - Books and papers on IA and AA
     - Self-Validated Numerical Methods and Applications
   - Static analysis books and literature, potentially digging into bounded model checking (BMC) and the likes
@@ -30,7 +29,7 @@ Change the Spade compiler to reason about the ranges of variables instead of num
        Minimization of fractional wordlength on fixed-point conversion for high-level synthesis
      - I have like 10 more of these...
 
-# Plan for the execution as well as planned dates for intermediate (half-time) control and presentation
+## Plan for the execution as well as planned dates for intermediate (half-time) control and presentation
   - Current plan
     1. First block, 4 weeks
       - Research on methods for deducing word lengths
@@ -47,11 +46,11 @@ Change the Spade compiler to reason about the ranges of variables instead of num
       - Do the presentation
       - Read the entire thesis and make sure it's internally consistent
 
-# Expected preliminary results that can be demonstrated at the half-time check
+## Expected preliminary results that can be demonstrated at the half-time check
   - Handle simple expressions like $a + b$
   - Have managed to check/deduce the word lengths in something
 
-# Risk analysis for different aspects of the thesis, for example, data sets for evaluation, shortcomings in the method, reasons for delays, missing/delayed hardware/software
+## Risk analysis for different aspects of the thesis, for example, data sets for evaluation, shortcomings in the method, reasons for delays, missing/delayed hardware/software
   - Delays might come from the compiler being hard to work due to the current state of the language. But for that I should be able to ask Frans so it should be safe, but it might be impossible.
   - As far as I know, no-one has gone this route of coupling word deduction and a Hindley-Milner typechecker before, which might cause problems
   - No special hardware is required, a simulator might even be overkill to do these changes to the compiler, which should be a great deal faster for me to work with than actual hardware
