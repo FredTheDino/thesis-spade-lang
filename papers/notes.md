@@ -15,7 +15,26 @@
  - Really good reference
 
 ## To Read
- - Siegfried M Rump and Masahide Kashiwagi. Implementation and improvements of affine arithmetic. Nonlinear Theory and Its Applications, IEICE, 6(3):341–359, 2015.
+ - Books and papers on IA and AA
+   - Self-Validated Numerical Methods and Applications
+   - Siegfried M Rump and Masahide Kashiwagi. Implementation and improvements of affine arithmetic. Nonlinear Theory and Its Applications, IEICE, 6(3):341–359, 2015.
+ - Static analysis books and literature, potentially digging into bounded model checking (BMC) and the likes
+   - Calculus of Computation, maybe more literature here
+ - The course on program analysis available on LiU 
+   - TDDE34 and the presentations there
+ - Previouse literature on Spade
+   - Spade: An HDL Inspired by Modern Software Languages and co
+ - Books and papers on typecheckers and compilers books and literature
+   - Some papers on Henk are interesting
+   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
+   - Types and Programming Languages by Ben Pierce
+ - There's a lot of FPGA literature on FPGA optimizaton, here are a few I've seen 
+    - Constantinides, George A.
+      Word-length Optimization for Differentiable Nonlinear Systems
+    - N. Doi and T. Horiyama and M. Nakanishi and S. Kimura
+      Minimization of fractional wordlength on fixed-point conversion for high-level synthesis
+
+
 
 ### From Frans - To Read
  - Philippe Coussy and Ghizlane Lhairech-Lebreton and Dominique Heller
