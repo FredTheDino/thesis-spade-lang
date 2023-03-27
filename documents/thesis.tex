@@ -21,10 +21,10 @@
 \departmentshort{ISY}
 
 \supervisor{Frans Skarman}
-\examiner{TODO:DANIEL SOMETHING
-\titleenglish{}
-% \subtitleenglish{100\% rainbow-free guarantee}
-\titleswedish{}
+\examiner{TODO:DANIEL SOMETHING}
+\titleenglish{Word-length inference in Spade}
+\subtitleenglish{Optimizing your hard-ware can be quick and easy}
+\titleswedish{Ordlängds inferans i Spade}
 \thesissubject{Datateknik}
 
 \publicationyear{2023}
@@ -47,178 +47,166 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Introduction}
 \label{chaIntro}
+% I just wrote something
+Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing software. If you want to create a special circuit you would not use a general purpose programming language (although things like haskell can compile to hardware \cite{src:HaskellLib}), these languages are refered to as Hardware Description Language (right?), or HDL for short. One of these HDL is Spade, a HDL for Field Programmable Gate Arrays (FPGAs) with a focus on usability which borrows much from the Rust programming language \cite{src:spadeSomething}. By writing high level ``code`` when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safe.
+
+This thesis focus on a specific kind of optimization, word-length inference. Using a novel approach of combining word-legnth inference with a Hindley-Milner-Kamme typechecker \cite{src:SpadeTypes}. Word-length is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this word-length right everywhere can be tedious and time consuming, a small error in the word length might cause faults in the program \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
+Since the compiler has access to all the source code for the hardware the compiler should be able to check the word lengths everywhere and potentially optimize the word-length where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today \cite{src:generalCodeIsGood}.
+
+\section{Motivation}
+Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can tools for all to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go or Rust. Bringing this mindset to the hardware world is going to increase the productivity, usability and accessibility to custom circuits and potentially CPUs. HDLs have the huge potential of improving all CPUs in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry but it's certainly a step in the right direction for the world.
 
 \section{Research questions}
 \begin{enumerate}
-  \item A
-  \item B
+  \item How can overestimation be used to implement word-length inference?
+  \item How does word-length inference and optimization affect the size${}^{*}$ and power draw of a circuit?
+  \item Can a high level hardware language remove bugs from hardware?
+  \item Can word-length inference be used to create more reusable code?
 \end{enumerate}
-*Speed is defined by asymptotic computational complexity.
+* What is size? Number of units used on the FPGA? I don't know
+
 
 \section{Aim}
+This study aims to show that hardware languages can benefit from more robust and sophisticated compilers, the benefits would be shown by implementing word-length inference into Spade. The implementation should then be evaluated in a synthesis and compared to other Spade-programs without these optimizations.
+% TODO: Install a synthesis tool, and make everything nice and neat
 
 \section{Delimitations}
+The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated erroe-estimation like ME-gPC.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Background
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
 \label{chaBackground}
+Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the typechecker is out of scope for this background.
 
-\section{Graphs}
+\section{Introduction to Compiler Structure}
+What constitutes a compiler is not always easy. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input program is often text and we will assume this for the rest of this short introduction to compilers.
+
+Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis in a lexer of tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant or a keyword. After the lexing the parsing starts and syntactical analysis is started, here the context of the tokens is reasoned about. Here the compiler understands structures in the program like what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, the are usually there in spirit.
+
+The Spade compiler has both a lexer step and a parser step which are located in different modules.
+
+The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here we resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The word-length inference and optimizations will be an inner layer, the relevant details will be discussed in the section \ref{sec:TypeChecking}. 
+
+% TODO: Draw an image of how data flows through a compiler, also draw nice images of how the information increases over time.
+
+After the compiler has finished optimizing, the output is generated and potentially lowered (made less complex) in multiple stages, often by translating to a simpler internal representation which in the end makes generating the final output of the compiler easier.
+
+One ``layer`` is often called a ``pass`` and single-pass compilers are considered most efficent. Compilers acchive single-pass compilation speedup by grouping all the separate steps together which can get hard to read and edit. Spade is not a single-pass compiler.
+
+\cite{src:DragonBook}\cite{src:LecturesOnCompilers}
+
+As stated previousely, all compilers are a bit different. But compilers generally follow the same structure and these general steps. I personally like to visualize this using diagrams since I feel they convey the same ideas clearer.
+
+% Image of the multiple layers of a compiler, what is feed between the layers, and a graph of how much information is available in each step to work with for the compiler.
+
+\section{Type Checking} % Maybe `inner layers`?
+\label{sec:TypeChecking}
+Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences. The typechecker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record``. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
+
+The typechecker in Spade is a one directional Hindley-Milner-Kamme typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function.
+
+\cite{src:TypeCheckersBook}
+
+\section{Word-length deduction}
+
+\section{Affine Arithmetic and Modified Affine Arithmetic}
+\label{sec:IAandAA}
+
+\section{Word-length Optimization}
+
+\section{Spade}
+
+\section{FPGA}
 
 \chapter{Related Work}
 
-\section{Exact Algorithms for No-Rainbow Coloring and Phylogenetic Decisiveness}
+\section{Interval-based analysis and word-length optimization of non-linear systems with control-flow structures}
+Interval-based analysis and word-length optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal word lengths is suggested but not evaluated.
 
+% TODO: I'm not sure I have the right PDF, I might only have the first few pages (but it's wierd with the sources? Is it just really wierd?
+\cite{src:WlOpNLSystems}
+
+\section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
+Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and didn't always show as promising results.
+
+\cite{src:MinOfFrac}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Project Plan
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Project Plan}
+A breif outline of the project and what I'm to do is described.
 
 \section{Method}
+The method sketch looks like this:
+\begin{enumerate}
+  \item Implement word-length deduction in Spade
+  \item Implement word-length minimization in Spade
+  \item Make the word-length deduction toggleable
+  \item Find ~8 programs that represent a vide usage of Spade features
+  \item Simulate the programs and make sure they behave identically
+  \item Run a synthesis tool on the 8 programs with and without the word-length deduction in a synthesizer. Note down the LUT usage, the expected power draw. The data gathered is the control data.
+  \item Compare the results.
+  \item Profit.
+\end{enumerate}
 
 \section{Expected Results}
+I expect to find places where the word-length could be deduced and optimized. I am to have no affect on correctness, but it might be noticeable in some applications unless we only optimize the simplest of cases.
 
-\section{GANTT-chart}
-A GANTT-chart of the work is presented in Figure \ref{figGanttChart}.
+\newpage
+\section{Plan Split Into Weeks}
+Bellow is a list with tasks and goals for each week. The goals aren't strict and I will most certainly not hold them, they are more akin to guidelines, a perfect ideal that would require the thesis to be written to know perfectly. 
 
-\begin{center}
-\begin{figure}[htp]
-\begin{ganttchart}[
-    vgrid,
-    bar left shift=0.15,
-    bar right shift=-0.15,
-    bar/.append style={rounded corners=3pt},
-    bar inline label node/.style={%
-      anchor=south, font=\ganttvalueof{bar label font}%
-    },%
-    inline,
-    milestone inline label node/.style={%
-      anchor=north, font=\ganttvalueof{milestone label font}%
-    },%
-    expand chart=\textwidth
-]{1}{20}
-\gantttitle{Project Plan}{20} \\
-\gantttitlelist{1,...,20}{1} \\
+Weeks are relative to the start of the project, the start of the project was week 9, 2023.
 
-\ganttgroup{Problem}{1}{13} \\
-\ganttbar{Discover solutions}{1}{9}
-\ganttlinkedbar{Present solution}{10}{13} \\
-\ganttmilestone{Show to examiner}{4}
-\ganttmilestone[milestone inline label node/.style={anchor=south}]{Solution OK by examiner}{9} \\
-\\
-\ganttgroup{Report}{1}{19} \\
-\ganttbar{Related works}{2}{8} \\
-\ganttbar{Discussion}{11}{13} \\
-\ganttbar{Conclusion}{14}{14} \\
-\ganttbar{Introduction}{15}{15} \\
+Each week will also be completed with a short description of what was done, insights, questions and what else I feel is relevant to the project. The longer one has to plan for, the more uncertain the plan becomes. Some of this plan is also written after the plan has been started but for me the plan has had this shape for some time now, at least the first few weeks.
 
-\ganttbar{Polish report}{16}{17} \\
-\ganttlinkedbar{Presentation}{18}{20} \\
+\newcommand{\done}[0]{\textbf{DONE}}
+\newcommand{\curr}[0]{\textbf{->}} %% TODO
+\newcommand{\futr}[0]{\textbf{FUTURE}}
+\newcommand{\presentable}[1]{\newline{}\textbf{presentable:}#1}
 
-\ganttmilestone{Find opponent}{16} \\
-\ganttmilestone{1st hand in}{17} \\
+\begin{enumerate}
+  \item \done Get an understanding for the field, get used to hardware, read some of the literature (probably without understanding it). The aim of this week is to get an understanding of what is needed in the background chapter.
+  \item \done Still getting an understanding for the field. More interacting with the codebase, hopefully have something merged by the end of the week. 
+  \item \curr I should have footing in the field. Start to hone in on the more interesting pieces of the Spade compiler. Start working on the plan. Finish of the plan. \presentable{The plan for the thesis}
+  \item \curr Start writing for the background and introduction of the thesis reading papers should go a lot faster. I should start working on changing the compiler. 
+  \item \futr Read papers, write background, stub introduction, sub method, implementation work. \presentable{Outline of entire thesis} 
+  \item \futr Read papers, write background, implementation work. 
+  \item \futr Read papers, write background, implementation work. 
+  \item \futr Read papers, write background, implementation work. \presentable{A program that can be tested or does something} 
+  \item \futr Read papers, write background, but most focus on implementation work.
+  \item \futr Read papers, write background, but most focus on implementation work.
+  \item \futr Read papers, write background, but most focus on implementation work.
+  \item \futr Write abstract, write introduction, write method, finish of implementation work. \presentable{Preliminary results} 
+  \item \futr Write abstract, write introduction, write method, finish of implementation work. 
+  \item \futr Write results, write conclusion, polish implementation. \presentable{Actual results} 
+  \item \futr Revise the thesis, send a draft of the thesis.
+  \item \futr Revise the thesis, send another draft of the thesis.
+  \item \futr Send in thesis and work on presentation. \presentable{The thesis} 
+  \item \futr Work on presentation and hold presentation. \presentable{The presentation} 
+  \item \futr Slack, because I know I can't plan.
+  \item \futr Slack, because I know I can't plan.
+\end{enumerate}
 
-\ganttmilestone[milestone inline label node/.style={anchor=north east}]{Hold presentation and final hand in}{20} \\
-
-\ganttlink{elem1}{elem7}
-\ganttlink{elem7}{elem8}
-\ganttlink{elem6}{elem7}
-\ganttlink{elem8}{elem9}
-\ganttlink{elem9}{elem10}
-\end{ganttchart}
-  \caption{The project plan for the final thesis.}
-  \label{figGanttChart}
-\end{figure}
-\end{center}
-
-\subsection{Polish report}
-In the report group, each task corresponds to a chapter except ``Polish report``.
-The ``Polish report`` chapter is for fixing everything else that needs fixing.
-The vague heading ``Polish report`` will also serve as slack for the project.
-
-\subsection{Related works}
-The goal with ``related works`` is to write the related works section and understand the subject in a wider context.
-This activity results in a finished background/related works section, and a broader understanding of the subject.
-Both the background and related works should preferably be too large here to be trimmed later.
-
-\subsection{Discussion}
-The discussion is written here.
-
-\subsection{Conclusion}
-The conclusion is written here.
-
-\subsection{Introduction}
-The Introduction is written here.
-
-\subsection{Discover solutions}
-The heading ``Discover solutions`` also needs some clarification. Constructing
-an algorithm is a creative process. For a creative process it is instrumental
-to move between working and thinking. The related works section is scheduled for
-parts of the duration of discovering solutions. Since knowing more about the
-area will feed back into new ideas for other algorithmic solutions. 
-Figure \ref{figCreativeProcess} contains a visualization of the workflow I imagine.
-
-\begin{center}
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[thick, node/.style = {draw}]
-  \node[node] (a) at (0,0) {Brainstorm solutions};
-  \node[node] (b) at (0,3) {Shoot down ideas};
-  \node[node] (c) at (5,1.5) {Read external sources};
-
-  \draw[->] (a) to[out=30,in=-30] node[right]{Suggestions} (b);
-  \draw[->] (b) to[out=-150,in=150] node[left]{Experience} (a);
-  \draw[->] (c) to[out=-90,in=0] node[right]{Ideas for proofs} (a);
-  \draw[->] (c) to[out=90,in=0] node[right]{Ideas for algorithms} (b);
-\end{tikzpicture}
-\caption{The creative process of constructing algorithms according to the author.}
-\label{figCreativeProcess}
-\end{figure}
-\end{center}
-
-\subsection{Present solution}
-Extra work is put into presenting the solution and writing a solid proof.
-This means polishing the proof to make the proofs as clear and well written as possible.
-Here the bulk of the report is written.
-The proofs and the explanations are put into place as the basis for the rest of the thesis.
-
-\subsection{Milestones ``Show to examiner`` and ``Solution OK by examiner``}
-These milestones will give me deadline.
-These deadlines stop the creative process of discovering algorithms from losing focus.
-I will know if these milestones are reached if my examiner thinks the work is good.
-The `Solution OK by examiner`` correspond to the halftime reviews.
-
-\subsection{Milestone ``Find opponent``}
-Will find someone to oppose me, and preferably someone to oppose. 
-
-\subsection{Milestone ``1st hand in``}
-A first version of the thesis is handed in, in a state that I would be happy to
-publish. But expecting further revisions.
-
-\subsection{Milestone ``Hold presentation and final hand in``}
-The final presentation is held. I get feedback from my examiner and my
-opponent. This feedback is the quickly revised then the thesis can be sent for
-publishing.
+\section{Resources}
+I need access to FPGA simulation and synthesis software.
 
 \section{Risks}
 
 \begin{enumerate}
-  \item (\textbf{likelihood:} medium, \textbf{severity:} high)
-    The largest risk for failure is if no sufficiently good algorithm
-    is found the project will have to be restructured. Either a different problem
-    will have to be chosen (preferably in a related area), or the thesis will have
-    to pivot to focus more on why there is not a faster algorithm.
+  \item (\textbf{likelihood:} medium, \textbf{severity:} medium) A compiler is a complex piece of software, I might miss something important when integrating my changes and this might cause the implementation to take extra time. I can mitigate this by adding extra slack time in the plan for development.
 
-  \item (\textbf{likelihood:} low, \textbf{severity:} medium)
-    The examiner might not know enough about the subject area to give valid
-    guidance. This might prolong the project and force me to redo work. I will
-    have to be critical of the feedback from my examiner and make sure I have a
-    solid understanding.
+  \item (\textbf{likelihood:} low, \textbf{severity:} high) There are limitations to Hindley-Milner-Kamme typesystems and things that cannot be done with them. Maybe word-length induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
 
-  \item (\textbf{likelihood:} medium, \textbf{severity:} low)
-    There might not be enough background surrounding the no-rainbow problem.
-    This will force me to branch out more in my research but should still allow
-    me to formulate a good thesis. The project might take more time if there
-    are few sources. To mitigate this I should read a wide variety of articles.
+  \item (\textbf{likelihood:} medium, \textbf{severity:} low) Software might be hard to guage the progress of if you don't understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
+
+  \item (\textbf{likelihood:} high, \textbf{severity:} high) I might work less than I plan each week due to other things in my life, unfortunately I can't plan around then only for them. This is extra prevalent since I feel like I've already done half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Only mitigation I know of is to have fun, but this problem cannot be avoided or solved.
+
 \end{enumerate}
 
 \printbibliography
+
+\end{document}
