@@ -19,12 +19,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Settings
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\department{TODO:DEPARTMENT}
-\departmentenglish{TODO:DEPARTMENT}
+\department{Institutionen för systemteknik}
+\departmentenglish{Department of Electrical Engineering}
 \departmentshort{ISY}
 
 \supervisor{Frans Skarman}
-\examiner{TODO:DANIEL SOMETHING}
+\examiner{Oscar Gustavson}
 \titleenglish{Wordlength inference and optimization in Spade-lang}
 \subtitleenglish{Optimizing your hardware does not have to be hard}
 \titleswedish{Ordlängds inferans i Spade}
@@ -67,12 +67,10 @@ Creating more powerful tools allows us to do more powerful things with them. In 
 \section{Research questions}
 \begin{enumerate}
   \item How can overestimation be used to implement wordlength inference?
-  \item How does wordlength inference and optimization affect the size${}^{*}$ and power draw of a circuit?
+  \item How does wordlength inference and optimization affect the number of LUTs, DPS-blocks and memories for a circuit?
   \item Can a high level hardware language remove bugs from hardware?
   \item Can wordlength inference be used to create more reusable code?
 \end{enumerate}
-* What is size? Number of units used on the FPGA? I don't know
-
 
 \section{Aim}
 This study aims to show that hardware languages can benefit from more robust and sophisticated compilers, the benefits would be shown by implementing wordlength inference into Spade. The implementation should then be evaluated in a synthesis and compared to other Spade-programs without these optimizations.
@@ -181,7 +179,8 @@ Both AA and IA accumulate error in order to over estimate. If this error gets to
 \section{Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures}
 Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal wordlengths is suggested but not evaluated.
 
-\Todo{I'm not sure I have the right PDF, I might only have the first few pages (but it's weird with the sources? Is it just really weird?}
+\Todo{This is just a bad paper, remove it}
+\Todo{I'm not sure I have the right PDF, I might only have the first few pages. (But it's weird with the sources? Is it just really weird?)}
 \cite{src:WlOpNLSystems}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
