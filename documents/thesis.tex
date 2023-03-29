@@ -12,6 +12,9 @@
 \usetikzlibrary{topaths,calc,tikzmark}
 \usepackage{algorithm2e}
 \usepackage{pgfgantt}
+\usepackage{marginnote}
+\usepackage{marvosym}
+\usepackage[marginpar]{todo}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Settings
@@ -22,9 +25,10 @@
 
 \supervisor{Frans Skarman}
 \examiner{TODO:DANIEL SOMETHING}
-\titleenglish{Word-length inference in Spade}
-\subtitleenglish{Optimizing your hard-ware can be quick and easy}
+\titleenglish{Wordlength inference and optimization in Spade-lang}
+\subtitleenglish{Optimizing your hardware does not have to be hard}
 \titleswedish{Ordlängds inferans i Spade}
+\subtitleswedish{Optimering av hårdvara gör det enkelt att vara}
 \thesissubject{Datateknik}
 
 \publicationyear{2023}
@@ -33,10 +37,13 @@
 
 \addbibresource{thesis.bib}
 
+\renewcommand{\todomark}{TODO}
+
 \newcommand\tikznode[3][]%
    {\tikz[remember picture, baseline=(#2.base)]
       \node[minimum size=0pt,inner sep=0pt,#1](#2){#3};%
    }
+
 
 \author{Edvard Thörnros}
 
@@ -47,28 +54,29 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Introduction}
 \label{chaIntro}
-% I just wrote something
+\Todo{Is wordlength one word, two or maybe there should be a dash?}
+\Todo{I just wrote something, I dislike this}
 Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing software. If you want to create a special circuit you would not use a general purpose programming language (although things like haskell can compile to hardware \cite{src:HaskellLib}), these languages are refered to as Hardware Description Language (right?), or HDL for short. One of these HDL is Spade, a HDL for Field Programmable Gate Arrays (FPGAs) with a focus on usability which borrows much from the Rust programming language \cite{src:spadeSomething}. By writing high level ``code`` when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safe.
 
-This thesis focus on a specific kind of optimization, word-length inference. Using a novel approach of combining word-legnth inference with a Hindley-Milner-Kamme typechecker \cite{src:SpadeTypes}. Word-length is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this word-length right everywhere can be tedious and time consuming, a small error in the word length might cause faults in the program \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
-Since the compiler has access to all the source code for the hardware the compiler should be able to check the word lengths everywhere and potentially optimize the word-length where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today \cite{src:generalCodeIsGood}.
+This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining word inference with a Damas–Hindley–Milner typechecker \cite{src:SpadeTypes}. Wordlength is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming, a small error in the wordlength might cause faults in the program \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
+Since the compiler has access to all the source code for the hardware the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today \cite{src:generalCodeIsGood}.
 
 \section{Motivation}
 Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can tools for all to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go or Rust. Bringing this mindset to the hardware world is going to increase the productivity, usability and accessibility to custom circuits and potentially CPUs. HDLs have the huge potential of improving all CPUs in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry but it's certainly a step in the right direction for the world.
 
 \section{Research questions}
 \begin{enumerate}
-  \item How can overestimation be used to implement word-length inference?
-  \item How does word-length inference and optimization affect the size${}^{*}$ and power draw of a circuit?
+  \item How can overestimation be used to implement wordlength inference?
+  \item How does wordlength inference and optimization affect the size${}^{*}$ and power draw of a circuit?
   \item Can a high level hardware language remove bugs from hardware?
-  \item Can word-length inference be used to create more reusable code?
+  \item Can wordlength inference be used to create more reusable code?
 \end{enumerate}
 * What is size? Number of units used on the FPGA? I don't know
 
 
 \section{Aim}
-This study aims to show that hardware languages can benefit from more robust and sophisticated compilers, the benefits would be shown by implementing word-length inference into Spade. The implementation should then be evaluated in a synthesis and compared to other Spade-programs without these optimizations.
-% TODO: Install a synthesis tool, and make everything nice and neat
+This study aims to show that hardware languages can benefit from more robust and sophisticated compilers, the benefits would be shown by implementing wordlength inference into Spade. The implementation should then be evaluated in a synthesis and compared to other Spade-programs without these optimizations.
+\Todo{Install a synthesis tool, and make sure I know what kind of measurements I actually get}
 
 \section{Delimitations}
 The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated erroe-estimation like ME-gPC.
@@ -83,49 +91,97 @@ Programming languages in general is considered one of the more mature topics in 
 \section{Introduction to Compiler Structure}
 What constitutes a compiler is not always easy. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input program is often text and we will assume this for the rest of this short introduction to compilers.
 
-Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis in a lexer of tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant or a keyword. After the lexing the parsing starts and syntactical analysis is started, here the context of the tokens is reasoned about. Here the compiler understands structures in the program like what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, the are usually there in spirit.
+Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis in a lexer of tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant or a keyword. After the lexing the parsing starts and syntactical analysis is started, here the context of the tokens is reasoned about. Here the compiler understands structures in the program like what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, they are usually there in spirit.
 
 The Spade compiler has both a lexer step and a parser step which are located in different modules.
 
-The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here we resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The word-length inference and optimizations will be an inner layer, the relevant details will be discussed in the section \ref{sec:TypeChecking}. 
-
-% TODO: Draw an image of how data flows through a compiler, also draw nice images of how the information increases over time.
+The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here we resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The wordlength inference and optimizations will be an inner layer, the relevant details will be discussed in the section \ref{sec:TypeChecking}. 
 
 After the compiler has finished optimizing, the output is generated and potentially lowered (made less complex) in multiple stages, often by translating to a simpler internal representation which in the end makes generating the final output of the compiler easier.
 
-One ``layer`` is often called a ``pass`` and single-pass compilers are considered most efficent. Compilers acchive single-pass compilation speedup by grouping all the separate steps together which can get hard to read and edit. Spade is not a single-pass compiler.
+One ``layer`` is often called a ``pass`` and single-pass compilers are considered most efficient. Compilers achieve single-pass compilation speedup by grouping all the separate steps together which can get hard to read and edit. Spade is not a single-pass compiler.
 
 \cite{src:DragonBook}\cite{src:LecturesOnCompilers}
 
 As stated previousely, all compilers are a bit different. But compilers generally follow the same structure and these general steps. I personally like to visualize this using diagrams since I feel they convey the same ideas clearer.
 
-% Image of the multiple layers of a compiler, what is feed between the layers, and a graph of how much information is available in each step to work with for the compiler.
+\Todo{Image of the multiple layers of a compiler, what is feed between the layers, and a graph of how much information is available in each step to work with for the compiler.}
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
 Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences. The typechecker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record``. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
 
-The typechecker in Spade is a one directional Hindley-Milner-Kamme typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function.
+The typechecker in Spade is a one directional Damas–Hindley–Milner typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
 \cite{src:TypeCheckersBook}
 
-\section{Word-length deduction}
-
-\section{Affine Arithmetic and Modified Affine Arithmetic}
+\section{Interval Arithmetic and Affine Arithmetic}
 \label{sec:IAandAA}
+Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
-\section{Word-length Optimization}
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. A combination of these methods is what is considered state of the art today.
+
+\subsection{Interval Arithmetic}
+Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random\_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
+
+For a more throughout guide I recommend (INSERT SOURCE HERE)[self-validated-numerical-methods-and-applications], this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
+
+\subsubsection{Interval Arithmetic Special values}
+When doing static program analysis, some extra values are often defined. For example, it's okay to have an interval where one value is infinite. This interval is perfectly valid $[5, \infty]$.
+
+The empty interval is also defined, $[]$. This interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
+\Todo{IA, I have shorter definitions written in ``affine-and-interval-arithmatic.md``, but I think I'll just refer to the original sources since it's not really relevant except for the implementation, unless I get a specific result due to one of them.}
+
+\subsubsection{Interval Arithmetic: An example and Limitations}
+I find that one of the best ways to understand these things is with an example.
+We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$.
+
+\Todo{Make this clearer, I feel the understanding is lacking}
+\begin{verbatim}
+2 * [0, 1] + [1, 3] - [1, 3]
+// Scaling rule and subtraction is negated addition 
+[2 * 0, 2 * 1] + [1, 3] + (-1 * [1, 3])
+// Calculate
+[0, 2] + [1, 3] + [-3, -1]
+// Sum it upp
+[-2, 4]
+\end{verbatim}
+
+This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic doesn't reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. But this limitation leads us to affine arithmetic, which lets us reason more about the expressions we evaluate.
+
+
+\subsection{Affine Arithmetic}
+Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances and a combination is currently thought to be the current state of the art. 
+
+\subsubsection{How Affine Arithmetic works}
+In affine arithmetic there's a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic.
+
+Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that.
+
+\subsection{Error Explosion for Affine- and Interval Arithmetic }
+
+Both AA and IA accumulate error in order to over estimate. If this error gets too large, the estimations become worse. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+
+\Todo{Modified Affine Arithmetic?}
+\Todo{A nice image here would help understanding}
+
+
+\section{Optimization word lengths}
+\Todo{Describe the idea and why it's important}
 
 \section{Spade}
+\Todo{Explain what it is and why it exists, also shove some syntax}
 
 \section{FPGA}
+\Todo{Explain what an FPGA is and what makes it different from micro controllers}
 
 \chapter{Related Work}
+\Todo{Needs a lot more content here, and it's a very well studied subject}
 
-\section{Interval-based analysis and word-length optimization of non-linear systems with control-flow structures}
-Interval-based analysis and word-length optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal word lengths is suggested but not evaluated.
+\section{Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures}
+Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal wordlengths is suggested but not evaluated.
 
-% TODO: I'm not sure I have the right PDF, I might only have the first few pages (but it's wierd with the sources? Is it just really wierd?
+\Todo{I'm not sure I have the right PDF, I might only have the first few pages (but it's weird with the sources? Is it just really weird?}
 \cite{src:WlOpNLSystems}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
@@ -137,23 +193,23 @@ Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level S
 % Project Plan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Project Plan}
-A breif outline of the project and what I'm to do is described.
+A brief outline of the project and what I'm to do is described.
 
 \section{Method idea}
 The method sketch looks like this:
 \begin{enumerate}
-  \item Implement word-length deduction in Spade
-  \item Implement word-length minimization in Spade
-  \item Make the word-length deduction toggleable
+  \item Implement wordlength deduction in Spade
+  \item Implement wordlength minimization in Spade
+  \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features
   \item Simulate the programs and make sure they behave identically
-  \item Run a synthesis tool on the 8 programs with and without the word-length deduction in a synthesizer. Note down the LUT usage, the expected power draw. The data gathered is the control data.
+  \item Run a synthesis tool on the 8 programs with and without the wordlength deduction in a synthesizer. Note down the LUT usage, the expected power draw. The data gathered is the control data.
   \item Compare the results.
   \item Profit.
 \end{enumerate}
 
 \section{Expected Results}
-I expect to find places where the word-length could be deduced and optimized. I am to have no affect on correctness, but it might be noticeable in some applications unless we only optimize the simplest of cases.
+I expect to find places where the wordlength could be deduced and optimized. I am to have no affect on correctness, but it might be noticeable in some applications unless we only optimize the simplest of cases.
 
 \newpage
 \section{Plan Split Into Weeks}
@@ -163,14 +219,14 @@ Weeks are relative to the start of the project, the start of the project was wee
 
 Each week will also be completed with a short description of what was done, insights, questions and what else I feel is relevant to the project. The longer one has to plan for, the more uncertain the plan becomes. Some of this plan is also written after the plan has been started but for me the plan has had this shape for some time now, at least the first few weeks.
 
-\newcommand{\done}[0]{\textbf{Done:}\hspace{0.2em}}
-\newcommand{\curr}[0]{\textbf{Working On:}\hspace{0.2em}} %% TODO
+\newcommand{\past}[0]{\textbf{Done:}\hspace{0.2em}}
+\newcommand{\curr}[0]{\textbf{\MVRightarrow}\hspace{0.2em}}
 \newcommand{\futr}[0]{\textbf{Future:}\hspace{0.2em}}
 \newcommand{\presentable}[1]{\newline{}\textbf{Presentable:}\hspace{0.2em}#1}
 
 \begin{enumerate}
-  \item \done Get an understanding for the field, get used to hardware, read some of the literature (probably without understanding it). The aim of this week is to get an understanding of what is needed in the background chapter.
-  \item \done Still getting an understanding for the field. More interacting with the codebase, hopefully have something merged by the end of the week. 
+  \item \past Get an understanding for the field, get used to hardware, read some of the literature (probably without understanding it). The aim of this week is to get an understanding of what is needed in the background chapter.
+  \item \past Still getting an understanding for the field. More interacting with the codebase, hopefully have something merged by the end of the week. 
   \item \curr I should have footing in the field. Start to hone in on the more interesting pieces of the Spade compiler. Start working on the plan. Finish of the plan. \presentable{The plan for the thesis}
   \item \curr Start writing for the background and introduction of the thesis reading papers should go a lot faster. I should start working on changing the compiler. 
   \item \futr Read papers, write background, stub introduction, sub method, implementation work. \presentable{Outline of entire thesis} 
@@ -191,6 +247,8 @@ Each week will also be completed with a short description of what was done, insi
   \item \futr Slack, because I know I can't plan.
 \end{enumerate}
 
+\Todo{Is this plan too through?}
+
 \section{Resources}
 I need access to FPGA simulation and synthesis software.
 
@@ -200,14 +258,16 @@ I need access to FPGA simulation and synthesis software.
 \begin{enumerate}
   \item \riskHeader{medium}{medium} A compiler is a complex piece of software, I might miss something important when integrating my changes and this might cause the implementation to take extra time. I can mitigate this by adding extra slack time in the plan for development.
 
-  \item \riskHeader{low}{high} There are limitations to Hindley-Milner-Kamme typesystems and things that cannot be done with them. Maybe word-length induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
+  \item \riskHeader{low}{high} There are limitations to Damas–Hindley–Milner typesystems and things that cannot be done with them. Maybe wordlength induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
 
-  \item \riskHeader{medium}{low} Software might be hard to guage the progress of if you don't understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
+  \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you don't understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
 
   \item \riskHeader{medium}{high} I might work less than I plan each week due to other things in my life, unfortunately I can't plan around then only for them. This is extra prevalent since I feel like I've already done half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Only mitigation I know of is to have fun, but this problem cannot be avoided or solved.
 
 \end{enumerate}
 
 \printbibliography
+
+\todos
 
 \end{document}
