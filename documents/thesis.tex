@@ -163,7 +163,6 @@ Both AA and IA accumulate error in order to over estimate. If this error gets to
 \Todo{Modified Affine Arithmetic?}
 \Todo{A nice image here would help understanding}
 
-
 \section{Optimization word lengths}
 \Todo{Describe the idea and why it's important}
 
@@ -172,6 +171,10 @@ Both AA and IA accumulate error in order to over estimate. If this error gets to
 
 \section{FPGA}
 \Todo{Explain what an FPGA is and what makes it different from micro controllers}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Related Work
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Related Work}
 \Todo{Needs a lot more content here, and it's a very well studied subject}
@@ -187,6 +190,15 @@ Interval-based analysis and wordlength optimization of non-linear systems with c
 Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and didn't always show as promising results.
 
 \cite{src:MinOfFrac}
+
+\section{High-level synthesis and arithmetic optimizations}
+The thesis ``High-level synthesis and arithmetic optimizations`` is an attempt to merge the fields of arithmetic with and HDL-compilers. Several approaches are evaluated that affect correctness, throughput and latency. It describes fixed-point and floating point arithmetic, FPGA hardware and FPGA optimizations in a very clear way.
+
+Problems with the IEEE floating point numbers are mentioned, for one how the implicit rounding causes addition to be non-associative, and how C/C++ compilers used for HDL use CPU optimizations which aren't always suitable for FPGA.
+
+\author{src:HLSandOpt} is an alternative approach to Spade when it comes to generating hardware and it tries to generate better FPGA hardware by modifying a compilation layer for the current compilers. But C/C++ has a fundamental problem when being mapped to hardware, the languages were built for single-threaded sequential computations where FPGAs prefer to do computations in parallel.
+
+\cite{src:HLSandOpt}
 
 % # Planned literature supporting the thesis
 % - Books and papers on IA and AA
