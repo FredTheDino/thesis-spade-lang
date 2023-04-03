@@ -1,0 +1,12 @@
+compiler = { path = "/home/ed/Code/thesis-spade-lang/spade/" }
+
+[synthesis]
+top = "top"
+extra_verilog = [ "src/top.v" ]
+command = "synth_ecp5"
+
+[board]
+name = "ecpix-5"
+pin_file = "ecpix5.lpf"
+config_file = "openocd-ecpix5.cfg"
+
