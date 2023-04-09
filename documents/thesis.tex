@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Imports
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage[english]{babel}
+% \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[backend=biber,sorting=none,hyperref]{biblatex}
 \usepackage{mathtools}
@@ -39,12 +39,6 @@
 
 \renewcommand{\todomark}{TODO}
 
-\newcommand\tikznode[3][]%
-   {\tikz[remember picture, baseline=(#2.base)]
-      \node[minimum size=0pt,inner sep=0pt,#1](#2){#3};%
-   }
-
-
 \author{Edvard Thörnros}
 
 \begin{document}
@@ -56,10 +50,10 @@
 \label{chaIntro}
 \Todo{Is wordlength one word, two or maybe there should be a dash?}
 \Todo{I just wrote something, I dislike this}
-Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing software. If you want to create a special circuit you would not use a general purpose programming language (although things like haskell can compile to hardware \cite{src:HaskellLib}), these languages are refered to as Hardware Description Language (right?), or HDL for short. One of these HDL is Spade, a HDL for Field Programmable Gate Arrays (FPGAs) with a focus on usability which borrows much from the Rust programming language \cite{src:spadeSomething}. By writing high level ``code`` when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safe.
+Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing software. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are refered to as Hardware Description Language (right?), or HDL for short. One of these HDL is Spade, a HDL for Field Programmable Gate Arrays (FPGAs) with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level ``code`` when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safe.
 
-This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining word inference with a Damas–Hindley–Milner typechecker \cite{src:SpadeTypes}. Wordlength is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming, a small error in the wordlength might cause faults in the program \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
-Since the compiler has access to all the source code for the hardware the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today \cite{src:generalCodeIsGood}.
+This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining word inference with type inference. Wordlength is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming, a small error in the wordlength might cause faults in the program. %% \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
+Since the compiler has access to all the source code for the hardware the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today. 
 
 \section{Motivation}
 Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can tools for all to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go or Rust. Bringing this mindset to the hardware world is going to increase the productivity, usability and accessibility to custom circuits and potentially CPUs. HDLs have the huge potential of improving all CPUs in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry but it's certainly a step in the right direction for the world.
@@ -99,7 +93,7 @@ After the compiler has finished optimizing, the output is generated and potentia
 
 One ``layer`` is often called a ``pass`` and single-pass compilers are considered most efficient. Compilers achieve single-pass compilation speedup by grouping all the separate steps together which can get hard to read and edit. Spade is not a single-pass compiler.
 
-\cite{src:DragonBook}\cite{src:LecturesOnCompilers}
+\cite{src:DragonBook}\cite{src:CraftingInterp}\cite{src:KKLectures}
 
 As stated previousely, all compilers are a bit different. But compilers generally follow the same structure and these general steps. I personally like to visualize this using diagrams since I feel they convey the same ideas clearer.
 
@@ -107,15 +101,18 @@ As stated previousely, all compilers are a bit different. But compilers generall
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
-Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences. The typechecker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record``. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
+Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The typechecker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record`` \cite{src:spadeAnHDL}. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
 
 The typechecker in Spade is a one directional Damas–Hindley–Milner typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
-\cite{src:TypeCheckersBook}
 
 \section{Interval Arithmetic and Affine Arithmetic}
 \label{sec:IAandAA}
+
+There is an excellent explanation of both Interval- and Affine Arithmetic by \citeauthor{src:affAri} -- the following section is a short version to cover the absolute basics of the material.
+
 Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
+
 
 Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. A combination of these methods is what is considered state of the art today.
 
@@ -158,7 +155,9 @@ Notice how the first term lacks a noise symbol, this expresses where the center 
 
 \subsection{Error Explosion for Affine- and Interval Arithmetic }
 
-Both AA and IA accumulate error in order to over estimate. If this error gets too large, the estimations become worse. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+
+\cite{src:affAri}
 
 \Todo{Modified Affine Arithmetic?}
 \Todo{A nice image here would help understanding}
@@ -179,12 +178,12 @@ Both AA and IA accumulate error in order to over estimate. If this error gets to
 \chapter{Related Work}
 \Todo{Needs a lot more content here, and it's a very well studied subject}
 
-\section{Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures}
-Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal wordlengths is suggested but not evaluated.
-
-\Todo{This is just a bad paper, remove it}
-\Todo{I'm not sure I have the right PDF, I might only have the first few pages. (But it's weird with the sources? Is it just really weird?)}
-\cite{src:WlOpNLSystems}
+% \section{Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures}
+% Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal wordlengths is suggested but not evaluated.
+% 
+% \Todo{This is just a bad paper, remove it}
+% \Todo{I'm not sure I have the right PDF, I might only have the first few pages. (But it's weird with the sources? Is it just really weird?)}
+% \cite{src:WlOpNLSystems}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
 Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and didn't always show as promising results.
@@ -196,7 +195,7 @@ The thesis ``High-level synthesis and arithmetic optimizations`` is an attempt t
 
 Problems with the IEEE floating point numbers are mentioned, for one how the implicit rounding causes addition to be non-associative, and how C/C++ compilers used for HDL use CPU optimizations which aren't always suitable for FPGA.
 
-\author{src:HLSandOpt} is an alternative approach to Spade when it comes to generating hardware and it tries to generate better FPGA hardware by modifying a compilation layer for the current compilers. But C/C++ has a fundamental problem when being mapped to hardware, the languages were built for single-threaded sequential computations where FPGAs prefer to do computations in parallel.
+\citeauthor{src:HLSandOpt} is an alternative approach to Spade when it comes to generating hardware and it tries to generate better FPGA hardware by modifying a compilation layer for the current compilers. But C/C++ has a fundamental problem when being mapped to hardware, the languages were built for single-threaded sequential computations where FPGAs prefer to do computations in parallel.
 
 \cite{src:HLSandOpt}
 
