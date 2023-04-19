@@ -6,9 +6,7 @@ all: affine-and-interval-arithmatic.pdf thesis.pdf
 	pandoc -fmarkdown $< -tpdf -o $@
 
 %.pdf: %.tex %.bib abstract.tex 
-	tectonic --keep-intermediates --reruns 0 $<
-	biber $(shell basename --suffix=".tex" $<)
-	tectonic $< --outfmt pdf
+	tectonic --keep-intermediates --outfmt pdf --reruns 2 $<
 
 clean:
 	rm *.aux

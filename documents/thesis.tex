@@ -15,6 +15,7 @@
 \usepackage{marginnote}
 \usepackage{marvosym}
 \usepackage[marginpar]{todo}
+\usepackage{pgfgantt}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Settings
@@ -27,7 +28,7 @@
 \examiner{Oscar Gustavson}
 \titleenglish{Wordlength inference and optimization in Spade-lang}
 \subtitleenglish{Optimizing your hardware does not have to be hard}
-\titleswedish{Ordlängds inferans i Spade}
+\titleswedish{Ordlängdsinferans i Spade}
 \subtitleswedish{Optimering av hårdvara gör det enkelt att vara}
 \thesissubject{Datateknik}
 
@@ -50,54 +51,72 @@
 \label{chaIntro}
 \Todo{Is wordlength one word, two or maybe there should be a dash?}
 \Todo{I just wrote something, I dislike this}
-Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing software. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are refered to as Hardware Description Language (right?), or HDL for short. One of these HDL is Spade, a HDL for Field Programmable Gate Arrays (FPGAs) with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level ``code`` when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safe.
+Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing HDL. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are refered to as Hardware Description Language, or HDL for short. One of these HDL is Spade, a HDL with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer.
 
-This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining word inference with type inference. Wordlength is the number of bits to allocate to an instruction and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming, a small error in the wordlength might cause faults in the program. %% \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
-Since the compiler has access to all the source code for the hardware the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today. 
+This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining wordlength inference with type inference. Wordlength is the number of bits to allocate to a value and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming. A small error in the wordlength might cause faults in the program and a too large wordlength wastes resources. %% \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
+Since the compiler has access to all the source code for the hardware, the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today. 
 
 \section{Motivation}
-Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can tools for all to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go or Rust. Bringing this mindset to the hardware world is going to increase the productivity, usability and accessibility to custom circuits and potentially CPUs. HDLs have the huge potential of improving all CPUs in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry but it's certainly a step in the right direction for the world.
+Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can develop programs for anyone to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go, Rust or Python. Bringing this mindset to the hardware world could increase the productivity, usability and accessibility to custom circuits and accelerators. HDLs have the huge potential of improving all computation speeds in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry, but it's certainly a step in the right direction for energy-efficient and faster computations.
 
 \section{Research questions}
 \begin{enumerate}
-  \item How can overestimation be used to implement wordlength inference?
+  \item How can interval arithmetic and affine arithmetic be used to implement wordlength inference?
   \item How does wordlength inference and optimization affect the number of LUTs, DPS-blocks and memories for a circuit?
-  \item Can a high level hardware language remove bugs from hardware?
   \item Can wordlength inference be used to create more reusable code?
 \end{enumerate}
 
 \section{Aim}
-This study aims to show that hardware languages can benefit from more robust and sophisticated compilers, the benefits would be shown by implementing wordlength inference into Spade. The implementation should then be evaluated in a synthesis and compared to other Spade-programs without these optimizations.
-\Todo{Install a synthesis tool, and make sure I know what kind of measurements I actually get}
+This thesis will implement wordlength inference in the Spade compiler using a combination of interval arithmetic and affine arithmetic. The implementation should then be evaluated using a synthesis tool and compared to other Spade-programs without these optimizations.
 
 \section{Delimitations}
-The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated erroe-estimation like ME-gPC.
+The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated error-estimation like ME-gPC will not be studied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Background
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
 \label{chaBackground}
-Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the typechecker is out of scope for this background.
+A sufficient basis to understand this work is presented in this chapter.
+
+% Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the typechecker is out of scope for this background.
+% 
+% Wordlengths, HDLs and also get a section describing how they fit into this work.
+
 
 \section{Introduction to Compiler Structure}
-What constitutes a compiler is not always easy. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input program is often text and we will assume this for the rest of this short introduction to compilers.
+What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
 
-Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis in a lexer of tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant or a keyword. After the lexing the parsing starts and syntactical analysis is started, here the context of the tokens is reasoned about. Here the compiler understands structures in the program like what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, they are usually there in spirit.
+Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform semantic analysis -- parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, they are usually there in spirit.
 
 The Spade compiler has both a lexer step and a parser step which are located in different modules.
 
-The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here we resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The wordlength inference and optimizations will be an inner layer, the relevant details will be discussed in the section \ref{sec:TypeChecking}. 
+The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here we resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The wordlength inference and optimizations will be an inner layer, the relevant details will be discussed in the Section \ref{sec:TypeChecking}. 
 
 After the compiler has finished optimizing, the output is generated and potentially lowered (made less complex) in multiple stages, often by translating to a simpler internal representation which in the end makes generating the final output of the compiler easier.
 
-One ``layer`` is often called a ``pass`` and single-pass compilers are considered most efficient. Compilers achieve single-pass compilation speedup by grouping all the separate steps together which can get hard to read and edit. Spade is not a single-pass compiler.
-
+One ``layer`` is often called a ``pass``. Spade is not a multi-pass compiler and perform these steps sequentially -- not interleaved.
 \cite{src:DragonBook}\cite{src:CraftingInterp}\cite{src:KKLectures}
 
-As stated previousely, all compilers are a bit different. But compilers generally follow the same structure and these general steps. I personally like to visualize this using diagrams since I feel they convey the same ideas clearer.
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}[xscale=3, yscale=2]
+% vertical lines
+\draw (0,0) -- (0,1.2) node[above, rotate=90] {Lexing};
+\draw (0.4,0) -- (0.4,1.3) node[above, rotate=90] {Parsing};
+\draw (0.8,0) -- (0.8,1.5) node[above, rotate=90] {Typechecking};
+\draw (1.2,0) -- (1.2,1.3) node[above, rotate=90] {Optimizations};
+\draw (1.6,0) -- (1.6,1.2) node[above, rotate=90] {Code Generation};
+% horizontal line
+\filldraw[color=green, fill=green] (0,0) -- (0.8,1.0) -- (1.6,0);
+\draw (0.8,0.0) node[below] {``Available Information``};
+\end{tikzpicture}
+  \caption{A visualization of the rough measurement of information present in each step of the compilation process. Typechecking having the most information and lexing and code generation having the least amount of information.}
+  \label{fig:InformationCompilation}
+\end{center}
+\end{figure}
 
-\Todo{Image of the multiple layers of a compiler, what is feed between the layers, and a graph of how much information is available in each step to work with for the compiler.}
+Compilers have to construct a lot of complex information about the program. A visual that I find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
@@ -111,10 +130,9 @@ The typechecker in Spade is a one directional Damas–Hindley–Milner typecheck
 
 There is an excellent explanation of both Interval- and Affine Arithmetic by \citeauthor{src:affAri} -- the following section is a short version to cover the absolute basics of the material.
 
-Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
+Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago \cite{src:pianoTuners} or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
-
-Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. A combination of these methods is what is considered state of the art today.
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods that are considered more sophisticated like ME-gPC, but the extra complexity can be added later if it is found to be needed.
 
 \subsection{Interval Arithmetic}
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random\_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
@@ -155,15 +173,16 @@ Notice how the first term lacks a noise symbol, this expresses where the center 
 
 \subsection{Error Explosion for Affine- and Interval Arithmetic }
 
-Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+% Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
 
 \cite{src:affAri}
 
 \Todo{Modified Affine Arithmetic?}
 \Todo{A nice image here would help understanding}
 
-\section{Optimization word lengths}
-\Todo{Describe the idea and why it's important}
+\section{Wordlength inference}
+\Todo{Explain what it is and why it exists}
+
 
 \section{Spade}
 \Todo{Explain what it is and why it exists, also shove some syntax}
@@ -177,13 +196,6 @@ Both AA and IA accumulate error in order to overestimate. If this error gets too
 
 \chapter{Related Work}
 \Todo{Needs a lot more content here, and it's a very well studied subject}
-
-% \section{Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures}
-% Interval-based analysis and wordlength optimization of non-linear systems with control-flow structures suggests using Modified Affine Arithmetic to estimate values with little error, a method for iterative finding optimal wordlengths is suggested but not evaluated.
-% 
-% \Todo{This is just a bad paper, remove it}
-% \Todo{I'm not sure I have the right PDF, I might only have the first few pages. (But it's weird with the sources? Is it just really weird?)}
-% \cite{src:WlOpNLSystems}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
 Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and didn't always show as promising results.
@@ -234,51 +246,132 @@ The method sketch looks like this:
   \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features
   \item Simulate the programs and make sure they behave identically
-  \item Run a synthesis tool on the 8 programs with and without the wordlength deduction in a synthesizer. Note down the LUT usage, the expected power draw. The data gathered is the control data.
+  \item Run a synthesis tool on the 8 programs with and without the wordlength deduction in a synthesis-tool. Note down the LUT usage, the expected power draw. The data gathered is the control data.
   \item Compare the results.
   \item Profit.
 \end{enumerate}
 
 \section{Expected Results}
-I expect to find places where the wordlength could be deduced and optimized. I am to have no affect on correctness, but it might be noticeable in some applications unless we only optimize the simplest of cases.
+I expect to find places where the wordlength could be deduced and optimized. I expect no effect on correctness. In simple applications the inference should result in better wordlengths and decreased resource usage. The greatest gain I expect is in the code re-usability.
 
 \newpage
-\section{Plan Split Into Weeks}
-Bellow is a list with tasks and goals for each week. The goals aren't strict and I will most certainly not hold them, they are more akin to guidelines, a perfect ideal that would require the thesis to be written to know perfectly. 
+\section{GANTT-chart}
 
-Weeks are relative to the start of the project, the start of the project was week 9, 2023.
+\begin{center}
+\begin{figure}[htp]
+\begin{ganttchart}[
+    vgrid,
+    bar left shift=0.15,
+    bar right shift=-0.15,
+    bar/.append style={rounded corners=3pt},
+    bar inline label node/.style={%
+      anchor=south, font=\ganttvalueof{bar label font}%
+    },%
+    inline,
+    milestone inline label node/.style={%
+      anchor=north, font=\ganttvalueof{milestone label font}%
+    },%
+    expand chart=\textwidth
+]{1}{20}
+\gantttitle{Project Plan}{20} \\
+\gantttitlelist{1,...,20}{1} \\
 
-Each week will also be completed with a short description of what was done, insights, questions and what else I feel is relevant to the project. The longer one has to plan for, the more uncertain the plan becomes. Some of this plan is also written after the plan has been started but for me the plan has had this shape for some time now, at least the first few weeks.
+\ganttbar{Scope project}{1}{3} \\
+\ganttmilestone{The plan for the thesis}{3} \\
 
-\newcommand{\past}[0]{\textbf{Done:}\hspace{0.2em}}
-\newcommand{\curr}[0]{\textbf{\MVRightarrow}\hspace{0.2em}}
-\newcommand{\futr}[0]{\textbf{Future:}\hspace{0.2em}}
-\newcommand{\presentable}[1]{\newline{}\textbf{Presentable:}\hspace{0.2em}#1}
+\ganttgroup{Implementation}{4}{13} \\
+\ganttbar{Plan implementation}{4}{4}
+\ganttbar{Write code}{5}{11}
+\ganttbar{Evaluation}{12}{13}
 
-\begin{enumerate}
-  \item \past Get an understanding for the field, get used to hardware, read some of the literature (probably without understanding it). The aim of this week is to get an understanding of what is needed in the background chapter.
-  \item \past Still getting an understanding for the field. More interacting with the codebase, hopefully have something merged by the end of the week. 
-  \item \curr I should have footing in the field. Start to hone in on the more interesting pieces of the Spade compiler. Start working on the plan. Finish of the plan. \presentable{The plan for the thesis}
-  \item \curr Start writing for the background and introduction of the thesis reading papers should go a lot faster. I should start working on changing the compiler. 
-  \item \futr Read papers, write background, stub introduction, sub method, implementation work. \presentable{Outline of entire thesis} 
-  \item \futr Read papers, write background, implementation work. 
-  \item \futr Read papers, write background, implementation work. 
-  \item \futr Read papers, write background, implementation work. \presentable{A program that can be tested or does something} 
-  \item \futr Read papers, write background, but most focus on implementation work.
-  \item \futr Read papers, write background, but most focus on implementation work.
-  \item \futr Read papers, write background, but most focus on implementation work.
-  \item \futr Write abstract, write introduction, write method, finish of implementation work. \presentable{Preliminary results} 
-  \item \futr Write abstract, write introduction, write method, finish of implementation work. 
-  \item \futr Write results, write conclusion, polish implementation. \presentable{Actual results} 
-  \item \futr Revise the thesis, send a draft of the thesis.
-  \item \futr Revise the thesis, send another draft of the thesis.
-  \item \futr Send in thesis and work on presentation. \presentable{The thesis} 
-  \item \futr Work on presentation and hold presentation. \presentable{The presentation} 
-  \item \futr Slack, because I know I can't plan.
-  \item \futr Slack, because I know I can't plan.
-\end{enumerate}
+\ganttmilestone{Version of WL-inference that can be demoed}{8} \\
+\ganttmilestone{Preliminary results}{11} \\
 
-\Todo{Is this plan too through?}
+\\
+\ganttgroup{Thesis}{1}{19} \\
+\ganttbar{Background}{1}{10}
+\ganttmilestone{Find opponent}{16} \\
+
+\ganttmilestone{1st hand in}{17}
+\ganttbar{Related works}{4}{10} \\
+\ganttbar{Method}{3}{5}
+
+\ganttbar{Results}{11}{13}
+\ganttbar{Conclusion}{15}{16} \\
+
+\ganttbar{Discussion}{14}{15}
+  \ganttbar{Polish report}{17}{17} \\
+\ganttbar{Presentation}{18}{20} \\
+
+\ganttmilestone[milestone inline label node/.style={anchor=north east}]{Hold presentation and final hand in}{20} \\
+
+\ganttgroup{Research}{1}{8} \\
+\ganttbar{Read papers}{1}{8} \\
+
+% \ganttlink{elem11}{elem12}
+% \ganttlink{elem11}{elem4}
+% \ganttlink{elem5}{elem12}
+% \ganttlink{elem10}{elem12}
+% \ganttlink{elem9}{elem12}
+% \ganttlink{elem22}{elem9}
+% \ganttlink{elem22}{elem10}
+% \ganttlink{elem7}{elem8}
+% \ganttlink{elem6}{elem7}
+% \ganttlink{elem8}{elem9}
+% \ganttlink{elem9}{elem10}
+\end{ganttchart}
+  \caption{The project plan for the thesis project.}
+  \label{figGanttChart}
+\end{figure}
+\end{center}
+
+\subsection{Scope project}
+Understand what the project is and what the goal (and ant-goals) of the project are. What kind of implementation is needed? Are there simpler ways of reaching the same goal? These kinds of questions are answered and result in the thesis plan.
+
+\subsection{Implementation}
+The project will contain implementation. During the implementation section, program code is changed to make the changes needed to the codebase.
+
+\subsection{Plan implementation}
+Here we decide how to implement what needs to be implemented. This will result in some kind of specification or more detailed plan that can be used as a jumping off point.
+
+\subsection{Write code}
+Here code is written to add the needed features to the compiler.
+
+\subsection{Evaluation}
+Here we look for problems with the implementation and run evaluations on the compiler to measure the difference in resource usage. 
+
+\subsection{Thesis}
+This section is all about the written thesis which is produced for this project.
+
+\subsection{Background}
+The background is written here.
+
+\subsection{Related works}
+Related works section is written here.
+
+\subsection{Method}
+The method is written and planned here.
+
+\subsection{Result}
+The result is written here.
+
+\subsection{Conclusion}
+The conclusion is written here
+
+\subsection{Discussion}
+The conclusion is written here
+
+\subsection{Polish report}
+The report is cleaned up and read through -- clearing up what needs to be clearing up.
+
+\subsection{Presentation}
+The presentation is worked on in this section.
+
+\subsection{Research}
+This section is for understanding the field and researching
+
+\subsection{Read papers}
+Papers in the field are read to understand the field more deeply and figure out how and what needs to be done.
 
 \section{Resources}
 I need access to FPGA simulation and synthesis software.
