@@ -50,14 +50,14 @@
 \chapter{Introduction}
 \label{chaIntro}
 \Todo{Is wordlength one word, two or maybe there should be a dash?}
-\Todo{I just wrote something, I dislike this}
-Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing HDL. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are refered to as Hardware Description Language, or HDL for short. One of these HDL is Spade, a HDL with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer.
+\Todo{Just wrote something, dislike it}
+Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing HDL. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are referred to as Hardware Description Language, or HDL for short. One of these HDL is Spade, a HDL with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer.
 
 This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining wordlength inference with type inference. Wordlength is the number of bits to allocate to a value and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming. A small error in the wordlength might cause faults in the program and a too large wordlength wastes resources. %% \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
 Since the compiler has access to all the source code for the hardware, the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today. 
 
 \section{Motivation}
-Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can develop programs for anyone to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go, Rust or Python. Bringing this mindset to the hardware world could increase the productivity, usability and accessibility to custom circuits and accelerators. HDLs have the huge potential of improving all computation speeds in the world. It's questionably if this thesis alone will take us as far as to revolutionize the hardware industry, but it's certainly a step in the right direction for energy-efficient and faster computations.
+Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can develop programs for anyone to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go, Rust or Python. Bringing this mindset to the hardware world could increase the productivity, usability and accessibility to custom circuits and accelerators. HDLs have the huge potential of improving all computation speeds in the world. It is questionably if this thesis alone will take us as far as to revolutionize the hardware industry, but it is certainly a step in the right direction for energy-efficient and faster computations.
 
 \section{Research questions}
 \begin{enumerate}
@@ -116,7 +116,7 @@ One ``layer`` is often called a ``pass``. Spade is not a multi-pass compiler and
 \end{center}
 \end{figure}
 
-Compilers have to construct a lot of complex information about the program. A visual that I find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
+Compilers have to construct a lot of complex information about the program. A visual some find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
@@ -125,31 +125,31 @@ Type checking is a way of making sure the program is internally consistent, ther
 The typechecker in Spade is a one directional Damas–Hindley–Milner typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
 
-\section{Interval Arithmetic and Affine Arithmetic}
+\section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAandAA}
 
 There is an excellent explanation of both Interval- and Affine Arithmetic by \citeauthor{src:affAri} -- the following section is a short version to cover the absolute basics of the material.
 
-Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimating the number of piano tuners in Chicago \cite{src:pianoTuners} or the cosine of an angle. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
+Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimate bounds for mathematical functions or things that can be modeled by mathematical functions. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
-Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods that are considered more sophisticated like ME-gPC, but the extra complexity can be added later if it is found to be needed.
+\todo{Motivate why we chose to only use AA and IA}
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}.
 
 \subsection{Interval Arithmetic}
-Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random\_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
+Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
 
-For a more throughout guide I recommend (INSERT SOURCE HERE)[self-validated-numerical-methods-and-applications], this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
+For a more throughout guide on implementations \citetitle{src:affAir} by \citeauthor{src:affAir} is worth your time, this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
 
 \subsubsection{Interval Arithmetic Special values}
-When doing static program analysis, some extra values are often defined. For example, it's okay to have an interval where one value is infinite. This interval is perfectly valid $[5, \infty]$.
+When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
 
-The empty interval is also defined, $[]$. This interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
-\Todo{IA, I have shorter definitions written in ``affine-and-interval-arithmatic.md``, but I think I'll just refer to the original sources since it's not really relevant except for the implementation, unless I get a specific result due to one of them.}
+The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
+\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmatic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
 
 \subsubsection{Interval Arithmetic: An example and Limitations}
-I find that one of the best ways to understand these things is with an example.
+Examples are often helpful.
 We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$.
 
-\Todo{Make this clearer, I feel the understanding is lacking}
 \begin{verbatim}
 2 * [0, 1] + [1, 3] - [1, 3]
 // Scaling rule and subtraction is negated addition 
@@ -160,27 +160,30 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 [-2, 4]
 \end{verbatim}
 
-This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic doesn't reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. But this limitation leads us to affine arithmetic, which lets us reason more about the expressions we evaluate.
+This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmatic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
 
 
 \subsection{Affine Arithmetic}
 Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances and a combination is currently thought to be the current state of the art. 
 
 \subsubsection{How Affine Arithmetic works}
-In affine arithmetic there's a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic.
+In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic.
 
 Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that.
 
-\subsection{Error Explosion for Affine- and Interval Arithmetic }
+\subsection{Error Explosion for Affine- and Interval Arithmetic}
 
-% Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this doesn't affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+\Todo{Explain this better}
+% Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this does not affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
 
 \cite{src:affAri}
+
+\subsection{Other Self-Validating Numerical Methods}
 
 \Todo{Modified Affine Arithmetic?}
 \Todo{A nice image here would help understanding}
 
-\section{Wordlength inference}
+\section{Wordlength Inference}
 \Todo{Explain what it is and why it exists}
 
 
@@ -195,17 +198,17 @@ Notice how the first term lacks a noise symbol, this expresses where the center 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Related Work}
-\Todo{Needs a lot more content here, and it's a very well studied subject}
+\Todo{Needs a lot more content here, and it is a very well studied subject}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
-Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and didn't always show as promising results.
+Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and did not always show as promising results.
 
 \cite{src:MinOfFrac}
 
 \section{High-level synthesis and arithmetic optimizations}
 The thesis ``High-level synthesis and arithmetic optimizations`` is an attempt to merge the fields of arithmetic with and HDL-compilers. Several approaches are evaluated that affect correctness, throughput and latency. It describes fixed-point and floating point arithmetic, FPGA hardware and FPGA optimizations in a very clear way.
 
-Problems with the IEEE floating point numbers are mentioned, for one how the implicit rounding causes addition to be non-associative, and how C/C++ compilers used for HDL use CPU optimizations which aren't always suitable for FPGA.
+Problems with the IEEE floating point numbers are mentioned, for one how the implicit rounding causes addition to be non-associative, and how C/C++ compilers used for HDL use CPU optimizations which are not always suitable for FPGA.
 
 \citeauthor{src:HLSandOpt} is an alternative approach to Spade when it comes to generating hardware and it tries to generate better FPGA hardware by modifying a compilation layer for the current compilers. But C/C++ has a fundamental problem when being mapped to hardware, the languages were built for single-threaded sequential computations where FPGAs prefer to do computations in parallel.
 
@@ -224,24 +227,24 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 %   - Some papers on Henk are interesting
 %   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
 %   - Types and Programming Languages by Ben Pierce
-% - There's a lot of FPGA literature on FPGA optimizaton, here are a few I've seen 
+% - There is a lot of FPGA literature on FPGA optimizaton, here are a few
 %    - Constantinides, George A.
 %      Word-length Optimization for Differentiable Nonlinear Systems
 %    - N. Doi and T. Horiyama and M. Nakanishi and S. Kimura
 %      Minimization of fractional wordlength on fixed-point conversion for high-level synthesis
-%    - I have like 10 more of these...
+%    - Have like 10 more of these...
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Project Plan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Project Plan}
-A brief outline of the project and what I'm to do is described.
+An outline of the project. This section is a lot more informal and is expected to be removed before the final thesis is done.
 
 \section{Method idea}
 The method sketch looks like this:
 \begin{enumerate}
-  \item Implement wordlength deduction in Spade
+  \item Implement wordlength deduction in Spade in a seperate module
   \item Implement wordlength minimization in Spade
   \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features
@@ -251,8 +254,36 @@ The method sketch looks like this:
   \item Profit.
 \end{enumerate}
 
+
+The method sketch looks like this:
+\begin{enumerate}
+  \item Implement wordlength deduction in Spade in a seperate module
+  \item Implement wordlength minimization in Spade
+  \item Make the wordlength deduction toggleable
+  \item Find ~8 programs that represent a vide usage of Spade features
+  \item Simulate the programs and make sure they behave identically
+  \item Run a synthesis tool on the 8 programs with and without the wordlength deduction in a synthesis-tool. Note down the LUT usage, the expected power draw. The data gathered is the control data.
+  \item Compare the results.
+  \item Profit.
+\end{enumerate}
+
+\subsection{How the implementation will go}
+From discussions not present in this document (see the thesis github page for more info) a separate ``module`` or ``wordlength inference engine`` will be made. This ``engine`` will be feed requirements in the form of a different kind of type equations. The variables will then be solved through a simple bi-directional satisfaction algorithm. We can then export this information into the type-variables we find. This discussion will be moved into the thesis soon, I'm keeping it here for now tough. 
+
+Here is a small list of the steps I expect to take before starting the work.
+
+\begin{enumerate}
+    \item Add another set of ``type``-equations to the spade compiler, this step can be tested in isolation
+    \item Make the typechecker generate these type variables that can then be feed into the engine
+    \item Make the ``wordlength inference engine`` that is compatible with the current behavior of Spade
+    \item Simplify the variables to a single wordlength that the codegen can understand
+    \item Make the ``wordlength inference engine`` that uses AA and IA
+\end{enumerate}
+
+The nice thing about this is that we can swap out the implementations easily. The code is isolated and easy to change and update. It also makes my job easier since I don't have to understand the entire compiler. And this change will not affect the syntax at all, but the syntax can be changed later.
+
 \section{Expected Results}
-I expect to find places where the wordlength could be deduced and optimized. I expect no effect on correctness. In simple applications the inference should result in better wordlengths and decreased resource usage. The greatest gain I expect is in the code re-usability.
+It is expected that some situations the wordlength could be deduced and optimized. Since the current implementation is a strict over estimation there is some optimization fruit ripe for picking. The compiler should still be correct after these changes. In simple applications the inference should result in better wordlengths and decreased resource usage. The greatest gain will probably be in code re-usability and expressions being less directional.
 
 \newpage
 \section{GANTT-chart}
@@ -384,9 +415,9 @@ I need access to FPGA simulation and synthesis software.
 
   \item \riskHeader{low}{high} There are limitations to Damas–Hindley–Milner typesystems and things that cannot be done with them. Maybe wordlength induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
 
-  \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you don't understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
+  \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you do not understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
 
-  \item \riskHeader{medium}{high} I might work less than I plan each week due to other things in my life, unfortunately I can't plan around then only for them. This is extra prevalent since I feel like I've already done half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Only mitigation I know of is to have fun, but this problem cannot be avoided or solved.
+  \item \riskHeader{medium}{high} I might work less than I plan each week due to other things in my life, unfortunately I can not plan around then only for them. This is extra prevalent since I feel like I've already done half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Only mitigation I know of is to have fun, but this problem cannot be avoided or solved.
 
 \end{enumerate}
 
