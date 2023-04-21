@@ -268,9 +268,9 @@ The method sketch looks like this:
 \end{enumerate}
 
 \subsection{How the implementation will go}
-From discussions not present in this document (see the thesis github page for more info) a separate ``module`` or ``wordlength inference engine`` will be made. This ``engine`` will be feed requirements in the form of a different kind of type equations. The variables will then be solved through a simple bi-directional satisfaction algorithm. We can then export this information into the type-variables we find. This discussion will be moved into the thesis soon, I'm keeping it here for now tough. 
+From discussions not present in this document (see the thesis github page for more info) a separate ``module`` or ``wordlength inference engine`` will be made. This ``engine`` will be feed requirements in the form of a different kind of type equations. The variables will then be solved through a simple bi-directional satisfaction algorithm. We can then export this information into the type-variables we find. This discussion will be moved into the thesis soon, keeping it here for now tough. 
 
-Here is a small list of the steps I expect to take before starting the work.
+Here is a small and vauge-list of the implementation steps expected to take before starting the work.
 
 \begin{enumerate}
     \item Add another set of ``type``-equations to the spade compiler, this step can be tested in isolation
@@ -280,7 +280,7 @@ Here is a small list of the steps I expect to take before starting the work.
     \item Make the ``wordlength inference engine`` that uses AA and IA
 \end{enumerate}
 
-The nice thing about this is that we can swap out the implementations easily. The code is isolated and easy to change and update. It also makes my job easier since I don't have to understand the entire compiler. And this change will not affect the syntax at all, but the syntax can be changed later.
+The nice thing about this is that we can swap out the implementations easily. The code is isolated and easy to change and update. This change will not affect the syntax at all, but the syntax can be changed later.
 
 \section{Expected Results}
 It is expected that some situations the wordlength could be deduced and optimized. Since the current implementation is a strict over estimation there is some optimization fruit ripe for picking. The compiler should still be correct after these changes. In simple applications the inference should result in better wordlengths and decreased resource usage. The greatest gain will probably be in code re-usability and expressions being less directional.
@@ -405,19 +405,19 @@ This section is for understanding the field and researching
 Papers in the field are read to understand the field more deeply and figure out how and what needs to be done.
 
 \section{Resources}
-I need access to FPGA simulation and synthesis software.
+Need access to FPGA simulation and synthesis software.
 
 \section{Risks}
 
 \newcommand{\riskHeader}[2]{(\textbf{likelihood:} #1, \textbf{severity:} #2)}
 \begin{enumerate}
-  \item \riskHeader{medium}{medium} A compiler is a complex piece of software, I might miss something important when integrating my changes and this might cause the implementation to take extra time. I can mitigate this by adding extra slack time in the plan for development.
+  \item \riskHeader{medium}{medium} A compiler is a complex piece of software, might miss something important when integrating my changes and this might cause the implementation to take extra time. Can be mitigated this by adding extra slack time in the plan for development.
 
   \item \riskHeader{low}{high} There are limitations to Damas–Hindley–Milner typesystems and things that cannot be done with them. Maybe wordlength induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
 
-  \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you do not understand all the details involved. I might have trouble communicating my progress or where I am in the development cycle. I can mitigate this by doing small commits and bundles of work that can be integrated early to show some kind of progress.
+  \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you do not understand all the details involved. Might have trouble communicating my progress or how development is progressing. Mitigation can be doing small commits and bundles of work that can be integrated early to show some kind of progress.
 
-  \item \riskHeader{medium}{high} I might work less than I plan each week due to other things in my life, unfortunately I can not plan around then only for them. This is extra prevalent since I feel like I've already done half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Only mitigation I know of is to have fun, but this problem cannot be avoided or solved.
+  \item \riskHeader{medium}{high} Might work less than planned each week due to other things in my life, unfortunately cannot plan around then only for them. This is extra prevalent because of already doing half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Mitigation can be having fun, but this problem cannot be avoided or solved.
 
 \end{enumerate}
 
