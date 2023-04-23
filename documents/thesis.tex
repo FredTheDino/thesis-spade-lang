@@ -51,7 +51,7 @@
 \label{chaIntro}
 \Todo{Is wordlength one word, two or maybe there should be a dash?}
 \Todo{Just wrote something, dislike it}
-Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing HDL. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are referred to as Hardware Description Language, or HDL for short. One of these HDL is Spade, a HDL with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer.
+Computers are a part of our everyday lives and all computers have something that computes, a compute unit. In some cases this is a dedicated CPU but in all cases it can is purpose built hardware. A modern way of building hardware is -- funnily enough -- by writing programs that can be mapped to hardware. If you want to create a special circuit you would not use a general purpose programming language (although subsets of Haskell can compile to hardware \cite{src:ClashExists}), these languages are referred to as Hardware Description Language, or HDL for short. One of these HDL is Spade, a HDL with a focus on usability which borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer.
 
 This thesis focus on a specific kind of optimization, wordlength inference. Using a novel approach of combining wordlength inference with type inference. Wordlength is the number of bits to allocate to a value and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming. A small error in the wordlength might cause faults in the program and a too large wordlength wastes resources. %% \cite{src:BugsWithWordLength}. %% Some sources would be lovely here
 Since the compiler has access to all the source code for the hardware, the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general and easier to reuse, a common good practice in the software industry today. 
@@ -70,7 +70,7 @@ Creating more powerful tools allows us to do more powerful things with them. In 
 This thesis will implement wordlength inference in the Spade compiler using a combination of interval arithmetic and affine arithmetic. The implementation should then be evaluated using a synthesis tool and compared to other Spade-programs without these optimizations.
 
 \section{Delimitations}
-The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated error-estimation like ME-gPC will not be studied.
+The sample size of the programs is quite limited, there is no attempt made to generalize the findings to all hardware. This thesis is limited to Spade and FPGAs and will not consider optimizations on other kinds of hardware. Other more sophisticated error-estimation like ME-gPC and modified addine arithmetic will not be studied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Background
@@ -79,7 +79,7 @@ The sample size of the programs is quite limited, there is no attempt made to ge
 \label{chaBackground}
 A sufficient basis to understand this work is presented in this chapter.
 
-% Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the typechecker is out of scope for this background.
+% Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
 % 
 % Wordlengths, HDLs and also get a section describing how they fit into this work.
 
@@ -120,9 +120,9 @@ Compilers have to construct a lot of complex information about the program. A vi
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
-Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The typechecker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record`` \cite{src:spadeAnHDL}. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
+Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The type checker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record`` \cite{src:spadeAnHDL}. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
 
-The typechecker in Spade is a one directional Damas–Hindley–Milner typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to typecheck the identity function (a function that takes one value and returns the value as is, the function does nothing) the typechecker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
+The type checker in Spade is a one directional Damas–Hindley–Milner type checker. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
@@ -133,12 +133,12 @@ There is an excellent explanation of both Interval- and Affine Arithmetic by \ci
 Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimate bounds for mathematical functions or things that can be modeled by mathematical functions. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
 \todo{Motivate why we chose to only use AA and IA}
-Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}.
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}. For motivations of why are not considered see section \ref{sec:MotivationIAandAA}.
 
 \subsection{Interval Arithmetic}
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
 
-For a more throughout guide on implementations \citetitle{src:affAir} by \citeauthor{src:affAir} is worth your time, this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
+For a more throughout guide on implementations \citetitle{src:affAri} by \citeauthor{src:affAri} is worth your time, this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
 
 \subsubsection{Interval Arithmetic Special values}
 When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
@@ -172,26 +172,90 @@ In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a n
 Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that.
 
 \subsection{Error Explosion for Affine- and Interval Arithmetic}
+Both affine arithmetic and interval arithmetic compensate for unknown factors with a span of potential values. This method is fine for most computations that are small and simple, but this isn't always the case. Some calculations result in large spans of potential values -- since a smaller span gives more certainty and are easier to account for.
 
-\Todo{Explain this better}
-% Both AA and IA accumulate error in order to overestimate. If this error gets too large, the estimations become so vague the estimation is useless. The more operations that are being estimated the larger this error gets. Luckily this does not affect the correctness only the error of the answer but if the error is too large the estimation becomes useless.
+For the use case of circuits and FPGAs which are relevant for Spade this can be a large problem. This problem is further discussed in section \ref{sec:MotivationIAandAA}.
+
+\Todo{Don't know how good this is}
 
 \cite{src:affAri}
 
-\subsection{Other Self-Validating Numerical Methods}
+\section{Wordlength Inference and Typechecking in Spade}
+\label{sec:TheProblem}
+Most values in Spade take up bits or space in the run time environment. Wordlength inference is mostly concerned with numbers -- so consider positive numbers without a decimal. Consider a program with a counter that resets to 0 after counting to 3, we do not need 32 bits to represent it. The cost of storing a number with 32 bits compared to 2 bits could be large if it requires a larger FPGA, extra circuit components or a different power rating. Compared to software where memory is considered abundant -- this causes Spade as a HDL to be designed differently compared to a highlevel programming language.
 
-\Todo{Modified Affine Arithmetic?}
-\Todo{A nice image here would help understanding}
+Wordlength inference is the compiler understanding what wordlength -- the number of bits -- is needed to store a value. Inferring this value well causes good resource usage and requires less manual intervention. Doing it poorly or not at all either requires users to manually specify the wordlength of each value, or a hardware that is inefficient.
 
-\section{Wordlength Inference}
-\Todo{Explain what it is and why it exists}
+\begin{figure}[h]
+\begin{center}
+\begin{verbatim}
+fn f(a: int<3>) -> int<4> {
+  a + 1 + 1
+}
 
+entity main(clk: clock, rst: bool) -> int<4> {
+  f(3)
+}
+\end{verbatim}
+\end{center}
+\label{fig:SimpleFaultSpade}
+\caption{``simple\_fault.spade`` A simple spade program that does not compile, showing the current limitations of wordlength inference.}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+\begin{verbatim}
+error: Type error
+  ┌─ src/simple\_fault.spade:1:27
+  │
+1 │   fn f(a: int<3>) -> int<4> {
+  │                      ------ int<4> type specified here
+  │ ╭───────────────────────────^
+2 │ │   a + 1 + 1
+3 │ │ }
+  │ ╰─^ Found type int<5>
+  │
+  = Expected: 4
+  =       in: int<4>
+  =      Got: 5
+  =       in: int<5>
+
+Error: aborting due to previous error
+\end{verbatim}
+\end{center}
+\label{fig:SimpleFaultSpadeCompileOutput}
+\caption{The output from the compiler when trying to compile the program ``simple\_fault.spade``}
+\end{figure}
+
+Consider the program in Figure \ref{fig:SimpleFaultSpade}. The function ``f`` adds 3 values together, two of which are known constants. We also know that $2^3 + 2 < 2^4$ -- we should be able to fit the result of the addition into the 4 bit word without loss of data. The compiler does not agree as seen in the compiler output in Figure \ref{fig:SimpleFaultSpadeCompileOutput} where it claims we need 5 bits to store this value. This problem might seem inconsequential since calculating constant expressions during compilation would fix this, as seen by the program in Figure \ref{fig:SimpleCorrectSpade} compiling without worries. Only fixing this problem for constants would be nice variables would cause the same problem to appear but in a more difficult form. The problem here is much deeper, and is a direct cause of the typechecking algorithm itself.
+
+\begin{figure}[h]
+\begin{center}
+\begin{verbatim}
+fn f(a: int<3>) -> int<4> {
+  a + 2
+}
+
+entity main(clk: clock, rst: bool) -> int<4> {
+  f(3)
+}
+Error: aborting due to previous error
+\end{verbatim}
+\end{center}
+\label{fig:SimpleCorrectSpade}
+\caption{``simple\_correct.spade`` A spade program that does compile, which is very similar to the program in Figure \ref{fig:SimpleFaultSpade}}
+\end{figure}
+
+\todo{Maybe change to using screen shoots? But I like the idea of it being text since it's usually easier to read... Hmm...}
+\todo{Move this to the typechecking section?}
+The Spade compiler implements a the Damas-Hindley–Milner type checker -- a fast and modern type checker for simple type systems. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{fig:SimpleFaultSpade} and \ref{fig:SimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself. How this should be changed and to what is the central topic of this thesis.
 
 \section{Spade}
-\Todo{Explain what it is and why it exists, also shove some syntax}
+Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesised -- creating a faster iteration loop.
+\cite{src:spadeSomething} \cite{src:spadeAnHDL}
 
-\section{FPGA}
-\Todo{Explain what an FPGA is and what makes it different from micro controllers}
+% \section{FPGA}
+% \Todo{Explain what an FPGA is and what makes it different from micro controllers}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Related Work
@@ -223,7 +287,7 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 %   - TDDE34 and the presentations there
 % - Previouse literature on Spade
 %   - Spade: An HDL Inspired by Modern Software Languages and co
-% - Books and papers on typecheckers and compilers books and literature
+% - Books and papers on type checkers and compilers books and literature
 %   - Some papers on Henk are interesting
 %   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
 %   - Types and Programming Languages by Ben Pierce
@@ -234,6 +298,87 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 %      Minimization of fractional wordlength on fixed-point conversion for high-level synthesis
 %    - Have like 10 more of these...
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Method
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Method}
+The method chapter gives a high level overview of the method used in this paper. More detailed steps are delegated to the separate chapters. Chapter \ref{cha:Implementation} contains implementation details and chapter \ref{cha:ImplementationEval} contains evaluation of the implementation.
+
+The problem is clearly defined from the previous chapters, especially Section \ref{sec:TheProblem} which goes into detail with examples. Alternatives for this implementation are then presented to the project manager of the Spade compiler -- which also happens to be an author in this paper -- for evaluation and consideration, the motivation for picking these are discussed in Section \ref{sec:ImplementationAlt} and one of them are selected for implementation. Deciding what to implement is critical and is a part of the development process.
+
+After a viable solution is picked, it is time to implement that solution. Since the project is open source special care should be taken to make the changes easily accessible and available after this paper is written, since it is very much possible. A list of the repositories and versions of each software are available in the Appendix \ref{app:VersionsAndGitHashes} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Steps of the implementation and details relevant to the results are discussed in the implementation details section -- Section \ref{sec:ImplementationDetails}.
+
+% TODO: Fill in this X with a number when I have example programs.
+The implementation is then evaluated based on X example programs in Chapter \ref{cha:ImplementationEval} -- these programs are available in the Appendix \ref{app:Programs} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Here the synthesis tool -- yosys in this thesis -- generates statistics that are collected before and after the changes to the Spade compiler -- including if the program type checked before or not. The information collected for each program with each version of the Spade compiler are:
+\begin{itemize}
+    \setlength\itemsep{0.5em}
+    \item Version of the compiler used
+    \item Does it type check
+    \item Number of wires
+    \item Number of wire bits
+    \item Number of public wires
+    \item Number of public wires bits
+    \item Number of memories
+    \item Number of memory bits
+    \item Number of processes
+    \item Number of cells
+\end{itemize}
+This information is then presented in Chapter \ref{cha:Results} and the discussed in Chapter \ref{cha:Discussion} -- named ``Results`` and ``Discussion``.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Implementation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Implementation}
+\label{cha:Implementation}
+
+\section{Alternative Implementation}
+\label{sec:ImplementationAlt}
+
+\section{Implementation Details}
+\label{sec:ImplementationDetails}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Evaluation of the ImplementationDetails
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Evaluation of the Implementation}
+\label{cha:ImplementationEval}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Results
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Results}
+\label{cha:Results}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Discussion
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Discussion}
+\label{cha:Discussion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Conclusion
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Conclusion}
+\label{cha:Conclusion}
+
+\section{Future Work}
+
+\clearpage
+
+\printbibliography
+
+\appendix
+\chapter{Versions and Hashes}
+\label{app:VersionsAndGitHashes}
+\section{Git Hashes for Development}
+\section{Versions of programs}
+
+\chapter{Programs for Evaluation}
+\label{app:Programs}
+
+\section{Program A}
+\section{Program B}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Project Plan
@@ -245,20 +390,6 @@ An outline of the project. This section is a lot more informal and is expected t
 The method sketch looks like this:
 \begin{enumerate}
   \item Implement wordlength deduction in Spade in a seperate module
-  \item Implement wordlength minimization in Spade
-  \item Make the wordlength deduction toggleable
-  \item Find ~8 programs that represent a vide usage of Spade features
-  \item Simulate the programs and make sure they behave identically
-  \item Run a synthesis tool on the 8 programs with and without the wordlength deduction in a synthesis-tool. Note down the LUT usage, the expected power draw. The data gathered is the control data.
-  \item Compare the results.
-  \item Profit.
-\end{enumerate}
-
-
-The method sketch looks like this:
-\begin{enumerate}
-  \item Implement wordlength deduction in Spade in a seperate module
-  \item Implement wordlength minimization in Spade
   \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features
   \item Simulate the programs and make sure they behave identically
@@ -274,7 +405,7 @@ Here is a small and vauge-list of the implementation steps expected to take befo
 
 \begin{enumerate}
     \item Add another set of ``type``-equations to the spade compiler, this step can be tested in isolation
-    \item Make the typechecker generate these type variables that can then be feed into the engine
+    \item Make the type checker generate these type variables that can then be feed into the engine
     \item Make the ``wordlength inference engine`` that is compatible with the current behavior of Spade
     \item Simplify the variables to a single wordlength that the codegen can understand
     \item Make the ``wordlength inference engine`` that uses AA and IA
@@ -413,15 +544,13 @@ Need access to FPGA simulation and synthesis software.
 \begin{enumerate}
   \item \riskHeader{medium}{medium} A compiler is a complex piece of software, might miss something important when integrating my changes and this might cause the implementation to take extra time. Can be mitigated this by adding extra slack time in the plan for development.
 
-  \item \riskHeader{low}{high} There are limitations to Damas–Hindley–Milner typesystems and things that cannot be done with them. Maybe wordlength induction interacts poorly with the typechecker and bug or other incorrect behavior might sneak in.
+  \item \riskHeader{low}{high} There are limitations to Damas–Hindley–Milner typesystems and things that cannot be done with them. Maybe wordlength induction interacts poorly with the type checker and bug or other incorrect behavior might sneak in.
 
   \item \riskHeader{medium}{low} Software might be hard to gauge the progress of if you do not understand all the details involved. Might have trouble communicating my progress or how development is progressing. Mitigation can be doing small commits and bundles of work that can be integrated early to show some kind of progress.
 
   \item \riskHeader{medium}{high} Might work less than planned each week due to other things in my life, unfortunately cannot plan around then only for them. This is extra prevalent because of already doing half a thesis. This will most likely drain my motivation and might result in me not finishing the thesis and getting my degree. Mitigation can be having fun, but this problem cannot be avoided or solved.
 
 \end{enumerate}
-
-\printbibliography
 
 \todos
 
