@@ -26,10 +26,10 @@
 
 \supervisor{Frans Skarman}
 \examiner{Oscar Gustavson}
-\titleenglish{Wordlength inference and optimization in Spade-lang}
-\subtitleenglish{Optimizing your hardware does not have to be hard}
-\titleswedish{Ordlängdsinferans i Spade}
-\subtitleswedish{Optimering av hårdvara gör det enkelt att vara}
+\titleenglish{Seven implementations wordlength inference and one way that actually works}
+\subtitleenglish{Wordlength inference in Spade-lang}
+\titleswedish{Seven olika implementationer av ordlängdsinferans och en implementation som faktiskt fungerar}
+\subtitleswedish{Ordlängdsinferans i Spade-lang}
 \thesissubject{Datateknik}
 
 \publicationyear{2023}
@@ -278,6 +278,8 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 
 \cite{src:HLSandOpt}
 
+
+
 % # Planned literature supporting the thesis
 % - Books and papers on IA and AA
 %   - Self-Validated Numerical Methods and Applications
@@ -302,11 +304,11 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 % Method
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Method}
-The method chapter gives a high level overview of the method used in this paper. More detailed steps are delegated to the separate chapters. Chapter \ref{cha:Implementation} contains implementation details and chapter \ref{cha:ImplementationEval} contains evaluation of the implementation.
+The method chapter gives a high level overview of the method used in this paper. More detailed steps are delegated to the implementation Chapter \ref{cha:Implementation}. Chapter \ref{cha:Implementation} contains implementation details and analysis of the implementation.
 
 The problem is clearly defined from the previous chapters, especially Section \ref{sec:TheProblem} which goes into detail with examples. Alternatives for this implementation are then presented to the project manager of the Spade compiler -- which also happens to be an author in this paper -- for evaluation and consideration, the motivation for picking these are discussed in Section \ref{sec:ImplementationAlt} and one of them are selected for implementation. Deciding what to implement is critical and is a part of the development process.
 
-After a viable solution is picked, it is time to implement that solution. Since the project is open source special care should be taken to make the changes easily accessible and available after this paper is written, since it is very much possible. A list of the repositories and versions of each software are available in the Appendix \ref{app:VersionsAndGitHashes} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Steps of the implementation and details relevant to the results are discussed in the implementation details section -- Section \ref{sec:ImplementationDetails}.
+After a viable solution is picked, it is time to implement that solution. Since the project is open source special care should be taken to make the changes easily accessible and available after this paper is written, since it is very much possible. A list of the repositories and versions of each software are available in the Appendix \ref{app:VersionsAndGitHashes} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Steps of the implementation and details relevant to the results are discussed in the implementation details section -- Section \ref{sec:ImplementationDetails}. A full evaluation for each of the potential implementations and details about these implementations that are deemed relevant and interesting are mentioned. For full details it is probably best to read the source code. 
 
 % TODO: Fill in this X with a number when I have example programs.
 The implementation is then evaluated based on X example programs in Chapter \ref{cha:ImplementationEval} -- these programs are available in the Appendix \ref{app:Programs} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Here the synthesis tool -- yosys in this thesis -- generates statistics that are collected before and after the changes to the Spade compiler -- including if the program type checked before or not. The information collected for each program with each version of the Spade compiler are:
@@ -325,18 +327,71 @@ The implementation is then evaluated based on X example programs in Chapter \ref
 \end{itemize}
 This information is then presented in Chapter \ref{cha:Results} and the discussed in Chapter \ref{cha:Discussion} -- named ``Results`` and ``Discussion``.
 
+\section{Finding Implementations and Creative Problem Solving}
+Solving complex problems is a creative process. Programmings languages are required to be complex since the ideas expressed in them are themselves complex. Complex problems require complex tools. The complexity requires that the programming language
+has a certain degree of quality -- else the programming language quickly becomes useless and frustrating to use. To find a solution of sufficient quality requires trial and error and a good dose of analysis. Understanding partial solutions to a complex problem is a natural way of finding a solution that is higher in quality and hopefully good enough for the programming language to be usable. The Figure \ref{figCreativeProcess} contains a visualization of how these steps integrate with each other.
+
+\begin{center}
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[thick, node/.style = {draw}]
+  \node[node] (a) at (0,0) {Analyze implementation};
+  \node[node] (b) at (0,3) {Implement and find errors};
+  \node[node] (c) at (5,1.5) {External input};
+
+  \draw[->, align=left] (a) to[out=30,in=-30] node[right]{Ideas} (b);
+  \draw[->, align=left] (b) to[out=-150,in=150] node[left]{Deeper understanding} (a);
+  \draw[->] (c) to[out=-90,in=0] node[right]{Concrete ideas} (a);
+  \draw[->] (c) to[out=90,in=0] node[right]{Inspiration} (b);
+\end{tikzpicture}
+\caption{The creative process of solving complex problems according to the author.}
+\label{figCreativeProcess}
+\end{figure}
+\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Implementation}
+\chapter{Implementations and Analysis}
 \label{cha:Implementation}
+The problem of doing wordlength inference is a complex problem. This section contains a series of different implementations that failed in various ways, only the last one implementation ''worked'' and is described in Section \ref{sec:theWorkingOne}.
 
-\section{Alternative Implementation}
-\label{sec:ImplementationAlt}
+Each section describes the thought process, implementation details of most important, new insights gained from this work and an evaluation of the final state of the implementation for each attempted solution. Explicit commit hashes are given to make it very clear what version is discussed.
 
-\section{Implementation Details}
-\label{sec:ImplementationDetails}
+Starting the implementation work we knew parts of what we wanted to achieve. We wanted a more sophisticated version of wordlength inference that handled mathematical expressions with less error. The first step was understanding what was currently happening with the wordlength inference and where the problems where placed. The goal of this implementation was to find out just how much we did not know about the problem of a more sophisticated wordlength inferrer.
+
+At the start, the dream was to implement this wordlength inference into the typechecker directly. It was considered somewhat possible since Damas-Hindley-Milner typecheckers have been implemented with sub-typing that could be mapped onto this problem -- one such mapping is Elm with typeinference and extensible records.
+
+\section{The First Implementation -- Naive}
+\label{sec:First}
+The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.
+
+After throwing a quick glance at the code it became clear that at least lower and upper bounds -- though these changes would not solve the larger problem of inferring the wordlength using Affine Arithmetic only allowing usage of Interval Arithmetic, but adding Affine Arithmetic in the typechecker required a kind of replacement that was unclear how to add at the time. It was also considered reasonable to only support wordlengths that fit in 64 bits -- since the current FPGA design does not handle that kind of data.
+
+After poking some more two different ways of expressing constraints and requirement were found \verb+ConstraintExpr+ and \verb+Requirement+. These very similarly named concepts are very similar. \verb+ConstraintExpr+ is used primarily for compile-time integers and has support for addition, negation, constants and logarithms. \verb+Requirement+ adds information that does not fit neatly into a Damas–Hindley–Milner typesystem, namely: fields a type is expected to have, methods a type is expected to have and if a type can hold a given integer literal. Both \verb+Requirement+s and \verb+ConstraintExpr+s are removed after they are satisfied for a type.
+
+The type checking of binary expressions simply added $1$ to the wordlength for sum-expressions, and summed up the wordlengths for multiplication-expressions. The naive worstcase approach was changed to work using Interval Arithmetic. 
+
+\verb+ConstraintExpr+s looked to be the best suited current construction in the compiler so we decided to hijack it into supporting ranges, to see where the compiler started complaining. \verb+ConstraintExpr+ was changed to support addition, negation, and multiplication while working on a high and a low value not only a single value. The typechecking of binary expressions was also changed to add different constraints.
+
+This change broke a lot of things in the compiler in interesting ways. Array lengths no longer worked since they also used these kinds of \verb+ConstraintExpr+ -- which is very interesting to note. The types of some expressions also failed to infer which complicated the \verb+HIR-lowering+. The reason for the missing types is because there are choices to be made when typechecking some expressions, what wordlength should actually be used when there are multiple candidates. There was also an attempt at mitigating the missing types by introducing an extra solver stage for the \verb+ConstraintExpr+s -- this stage ran after a function was typechecked and tried to pick the smallest size of all constraints. This change was also too large to allow as much inter-op as possible with the mainline spade-compiler.
+
+The implementation outlined here did not work -- it was also never expected to work. It gave very clear hints as to where to dig deeper, where the understanding was sub par and some of the hidden requirements for adding wordlength inference.
+
+\section{The Second Implementation -- Another Naive Stab}
+The second attempt was also very early in the process. Changes are available on the git-branch \verb+the-second-simplest-thing+ and has git-hash \verb+3d92c0e4b28b64104f700c3d299f62e7938cb016+.
+
+Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which is the opposite of the \verb+BitsToRepresent+ expression which handles logarithms. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths at least somewhat freely. This idea and implementation -- was like the implemenetation in Section \ref{sec:First} -- not supposed to solve the entire problem and is not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference.
+
+When reviewing the code for this report an error in the original code was also found -- the function \verb+check_expr_for_replacement+ should refer to \verb+BitsToRange+ on line $1036$ -- the changes presented in this section never compiled.
+
+These new constraints did not suffice, since all of the constraints were equality (\verb+=+) constraints and for this idea to work less-than-or-equal constrains were required (\verb+<=+). Here we also start to suspect that the wordlength inference might need to be a seperate module, split up from the typechecker. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the typechecker the modules need some kind of communication and this communication is obviousely easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the typechecker currently throws away. These kinds of equations were the biggest find from the second experiment.
+
+\section{The Third Implementation -- Considering Equations}
+
+
+\section{The working implementation}
+\label{sec:theWorkingOne}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Evaluation of the ImplementationDetails
@@ -372,6 +427,30 @@ This information is then presented in Chapter \ref{cha:Results} and the discusse
 \chapter{Versions and Hashes}
 \label{app:VersionsAndGitHashes}
 \section{Git Hashes for Development}
+All code is available on \href{https://gitlab.com/FredTheDino/spade}{the thesis GitLab}
+\begin{verbatim}
+branchname: the-simplest-implementation
+git-commit: 74c966a0317aa738017d2edf15def4719fe8dc95
+
+branchname: the-second-simplest-thing
+git-commit: 3d92c0e4b28b64104f700c3d299f62e7938cb016
+
+branchname: the-third-simplest-with-equations
+git-commit: 83d1da48f5010767b9a96aea0a5bca13b7415084
+
+branchname: the-fourth-attempt-now-with-equivelence
+git-commit: ba0fa1baab56a725c31f703204da3b7d5f44380a
+
+branchname: the-fifth-attempt-now-without-returns
+git-commit: d8e9acbca755dea0c2ee78a014c578064c07d47e
+
+branchname: the-sixth-attempt
+git-commit: 11b3d060bc34145fda4918d255b186cb4057f07f
+
+branchname: the-seventh-attempt-almost-as-simple-as-attempt-one
+git-commit: 889afd61a59f04f60730964b8ae7a2703110dd99
+\end{verbatim}
+
 \section{Versions of programs}
 
 \chapter{Programs for Evaluation}
