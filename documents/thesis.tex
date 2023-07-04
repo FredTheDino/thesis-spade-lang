@@ -118,6 +118,8 @@ One ``layer`` is often called a ``pass``. Spade is not a multi-pass compiler and
 
 Compilers have to construct a lot of complex information about the program. A visual some find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
 
+\todo{monomorphisation}
+
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
 Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The type checker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record`` \cite{src:spadeAnHDL}. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
@@ -353,12 +355,18 @@ has a certain degree of quality -- else the programming language quickly becomes
 \end{figure}
 \end{center}
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Results
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \chapter{Results}
+% \label{cha:Results}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Implementations and Analysis}
 \label{cha:Implementation}
-The problem of doing wordlength inference is a complex problem. This section contains a series of different implementations that failed in various ways, only the last one implementation ''worked'' and is described in Section \ref{sec:theWorkingOne}.
+\todo{I removed the Results chapter and keept this instead, since I think all of this is results right?}
+The problem of doing wordlength inference is a complex problem. This section contains a series of different implementations that failed in various ways, only the last one implementation ''worked'' and is described in Section \ref{sec:Seven}.
 
 Each section describes the thought process, implementation details of most important, new insights gained from this work and an evaluation of the final state of the implementation for each attempted solution. Explicit commit hashes are given to make it very clear what version is discussed.
 
@@ -368,7 +376,7 @@ At the start, the dream was to implement this wordlength inference into the type
 
 In the discussions, some of the less interesting implementation details are deliberately left out. The withheld details aim to make the text clearer and focused.
 
-\section{Context and Goal of These Experiments}
+\section{Context and the Goal of These Experiments}
 Most of these implementations were experiments and were not thought to be the solutions most likely to work. The more encompassing and maybe easier solutions have always been adding a separate module for wordlength inference -- in a similar way to how the linear types are checked in Spade at the moment -- or adding a whole new typeinference and typechecker.
 
 The separate wordlength inference module was however not a completely sound solution. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the typeinference the modules need some kind of communication and this communication is obviously easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the typeinference currently throws away. These kinds of errors with the interaction between the typeinference were suspected to be difficult to fix, so a few minor experiments were made into potential easier solutions.
@@ -478,24 +486,49 @@ match *op {
 
 This approach worked, for some definition of working. This solution behaves poorly and causes some very frustrating error messages. Since the hidden type-variable stored in \verb+result_max+ can cause errors in typevariables that are not able to be referenced in the source code of the program -- this kind of code can cause hard to debug errors. The layer of indirection caused by \verb+result_max+ is required to allow unification of int's of various max number into the same size. The \verb+result_max+ variable is also not unified in the unification process which causes us to create a lot of variables with largely the same information without them being synchronized, this can cause inconsistencies with the typechecker in edgecases. There is also extra information that is sent outside the AST and is not recorded. All of this points strongly to a different approach where a separate module tries to infer the wordlength.
 
-\section{The Other Implementations -- Just Curiosities}
+\section{Other Implementations -- Just Curiosities}
 \label{sec:Other}
 There were two more attempts at an implementation inside the typechecker, they are available on the git-branches \verb+the-sixth-attempt+ and \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+. Both these experiments yielded little of interest and are only mentioned out of completeness.
 
-\section{The working implementation}
-\label{sec:theWorkingOne}
+\section{The Seventh Implementations -- a Seperate Module}
+\label{sec:Seven}
+After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted. Since the typechecker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inferrence. These changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.
+
+The idea for the implementation was to walk the entire AST after typechecking had run and monomorphisation was complete -- each entity was given to the wordlength-inference module called \verb+spade-wordlength-inference+. The algorithm from Figure \ref{fig:WLIAlgo} was then applied. Visit the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+, this is called an equation. Pick out all typevariables which are \verb+int<_>+ from the previous step, populating a mapping between type-variables and their wordlength. Then loop over all constraints from step 1 and try to evaluate the right-hand side. The evaluation method can be one of the three modes: ''Affine Arithmetic'', ''Interval Arithmetic'' and ''smallest of Affine Arithmetic and Interval Arithmetic''. If evaluation succeeded add the new variable to a new known set of variables and check there are no contradictions. Stop the loop if no more progress is made or we have looped as many times as there are equations. The result is then unified back into the AST for safekeeping. There are of course more details, and the Rust code for wordlenght inference is hopefully quite readable. If you are interested I would recommend reading the source code directly.
+
+\begin{figure}
+\begin{verbatim}
+(Variables, Equations) = extract_variables_and_equations(AST, TypeChecker)
+Known = extract_known_types(Variables, AST)
+
+for _ in Equations:
+  KnownAtStart = Known
+  for (Var, Body) in Equations:
+    MaybeValue = case InferMethod of
+                  IA -> evaluate_using_ia(Known, Body)
+                  AA -> evaluate_using_aa(Known, Body)
+                  AAIA -> min(evaluate_using_ia(Known, Body), evaluate_using_aa(Known, Body))
+    case MaybeValue of
+      Just Value -> inject_and_check_for_contradictions(Value, Known)
+      Nothing -> pass
+  if KnownAtStart == Known:
+    break
+
+for Var in Variables:
+  unify(TypeChecker, Var, Known[Var])
+\end{verbatim}
+\caption{The algorithm used in the seventh attempt to determine the wordlength for all expressions in a spade-program.}
+\label{fig:WLIAlgo}
+\end{figure}
+
+% - Show metrics compared on some example programs
+% - Describe what worked well, and what didn't work well (like that users can't describe ranges)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Evaluation of the ImplementationDetails
+% Evaluation of the Implementation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Evaluation of the Implementation}
 \label{cha:ImplementationEval}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Results
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Results}
-\label{cha:Results}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Discussion
@@ -541,6 +574,7 @@ git-commit: 11b3d060bc34145fda4918d255b186cb4057f07f
 
 branchname: the-seventh-attempt-almost-as-simple-as-attempt-one
 git-commit: 889afd61a59f04f60730964b8ae7a2703110dd99
+url: https://gitlab.com/spade-lang/spade/-/merge_requests/200
 \end{verbatim}
 
 \section{Versions of programs}
