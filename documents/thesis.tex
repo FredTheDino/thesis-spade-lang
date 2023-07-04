@@ -124,6 +124,10 @@ Type checking is a way of making sure the program is internally consistent, ther
 
 The type checker in Spade is a one directional Damas–Hindley–Milner type checker. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
+There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferrer could be used to check the types of the program and can easily be modded into a typechecker. It is infact upon this idea that the Damas–Hindley–Milner typechecker works. In this paper, we will freely refer to typecheckers and work by typeinferrence as both typecheckers and typeinferrence -- even though it might not be the most correct according to the literature we deem it adds variety and clarity to how these systemms function.
+
+\subsection{Unification}
+\todo{Fill this in!}
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAandAA}
@@ -360,13 +364,21 @@ Each section describes the thought process, implementation details of most impor
 
 Starting the implementation work we knew parts of what we wanted to achieve. We wanted a more sophisticated version of wordlength inference that handled mathematical expressions with less error. The first step was understanding what was currently happening with the wordlength inference and where the problems where placed. The goal of this implementation was to find out just how much we did not know about the problem of a more sophisticated wordlength inferrer.
 
-At the start, the dream was to implement this wordlength inference into the typechecker directly. It was considered somewhat possible since Damas-Hindley-Milner typecheckers have been implemented with sub-typing that could be mapped onto this problem -- one such mapping is Elm with typeinference and extensible records.
+
+At the start, the dream was to implement this wordlength inference into the typeinference directly. It was considered somewhat possible since Damas-Hindley-Milner typecheckers have been implemented with sub-typing that could be mapped onto this problem -- one such mapping is Elm with typeinference and extensible records.
+
+\section{Context and Goal of These Experiments}
+Most of these implementations were experiments and were not thought to be the solutions most likely to work. The more encompassing and maybe easier solutions have always been adding a separate module for wordlength inference -- in a similar way to how the linear types are checked in Spade at the moment -- or adding a whole new typeinference and typechecker.
+
+The separate wordlength inference module was however not a completely sound solution. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the typeinference the modules need some kind of communication and this communication is obviously easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the typeinference currently throws away. These kinds of errors with the interaction between the typeinference were suspected to be difficult to fix, so a few minor experiments were made into potential easier solutions.
+
+Replacing the typeinference in the current compiler with something more powerful could potentially be the best solution. The current typeinference was regarded by some contributors as magic and was hard to work with and reason about -- in some sense the module was considered technical-debt. This poses a lot of language design questions, questions this thesis hoped to avoid since it might cause features to not be merged and made useful in the mainline compiler. Considering for example that a more powerful typeinference might not be desirable in the language. Since most of the more powerful typechecking-systems are know to have horrid error messages -- the antithesis of Spades goal of friendly error messages -- the change should not be made to quickly out of respect for the project. It would also be a very large undertaking to retrofit the entire compiler to work with this new typeinference and be more work than is available in this thesis and was always considered out of scope. 
 
 \section{The First Implementation -- Naive}
 \label{sec:First}
 The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.
 
-After throwing a quick glance at the code it became clear that at least lower and upper bounds -- though these changes would not solve the larger problem of inferring the wordlength using Affine Arithmetic only allowing usage of Interval Arithmetic, but adding Affine Arithmetic in the typechecker required a kind of replacement that was unclear how to add at the time. It was also considered reasonable to only support wordlengths that fit in 64 bits -- since the current FPGA design does not handle that kind of data.
+After throwing a quick glance at the code it became clear that at least lower and upper bounds -- though these changes would not solve the larger problem of inferring the wordlength using Affine Arithmetic only allowing usage of Interval Arithmetic, but adding Affine Arithmetic in the typeinference required a kind of replacement that was unclear how to add at the time. It was also considered reasonable to only support wordlengths that fit in 64 bits -- since the current FPGA design does not handle that kind of data.
 
 After poking some more two different ways of expressing constraints and requirement were found \verb+ConstraintExpr+ and \verb+Requirement+. These very similarly named concepts are very similar. \verb+ConstraintExpr+ is used primarily for compile-time integers and has support for addition, negation, constants and logarithms. \verb+Requirement+ adds information that does not fit neatly into a Damas–Hindley–Milner typesystem, namely: fields a type is expected to have, methods a type is expected to have and if a type can hold a given integer literal. Both \verb+Requirement+s and \verb+ConstraintExpr+s are removed after they are satisfied for a type.
 
@@ -379,16 +391,91 @@ This change broke a lot of things in the compiler in interesting ways. Array len
 The implementation outlined here did not work -- it was also never expected to work. It gave very clear hints as to where to dig deeper, where the understanding was sub par and some of the hidden requirements for adding wordlength inference.
 
 \section{The Second Implementation -- Another Naive Stab}
+\label{sec:Second}
 The second attempt was also very early in the process. Changes are available on the git-branch \verb+the-second-simplest-thing+ and has git-hash \verb+3d92c0e4b28b64104f700c3d299f62e7938cb016+.
 
 Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which is the opposite of the \verb+BitsToRepresent+ expression which handles logarithms. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths at least somewhat freely. This idea and implementation -- was like the implemenetation in Section \ref{sec:First} -- not supposed to solve the entire problem and is not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference.
 
 When reviewing the code for this report an error in the original code was also found -- the function \verb+check_expr_for_replacement+ should refer to \verb+BitsToRange+ on line $1036$ -- the changes presented in this section never compiled.
 
-These new constraints did not suffice, since all of the constraints were equality (\verb+=+) constraints and for this idea to work less-than-or-equal constrains were required (\verb+<=+). Here we also start to suspect that the wordlength inference might need to be a seperate module, split up from the typechecker. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the typechecker the modules need some kind of communication and this communication is obviousely easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the typechecker currently throws away. These kinds of equations were the biggest find from the second experiment.
+These new constraints did not suffice, since all of the constraints were equality (\verb+=+) constraints and for this idea to work less-than-or-equal constrains were required (\verb+<=+). Less-than-or-equal constraints might be required for wordlength inference, and it might be why it is fairly hard and unstable to insert these constraints into the current constraint/requirement systems. The problem of adding Affine Arithmetic is still unsolved and would not be resolved using a solution of this form so we need to represent the operations and their values in full. We want to encode the operations and additions into a structure. We also need to carry the information for the intervals of variables somewhere else, since the current typesystem really disagrees with encoding ranges into int-types -- a new construction is required. 
 
 \section{The Third Implementation -- Considering Equations}
+\label{sec:Third}
+The third attempt focused on adding equations and added a seperate constraint language. These constraints are part of the typeinference.
 
+A new set of constraints was added giving \verb+ConstraintExpr+ and \verb+Requirement+ a new friend called \verb+SizeExpression+. Aside from the obvious technical-debt added with a whopping 3 different kinds of constraints that express almost the same thing -- the solution was deemed too ''ugly''. The constraints needed for \verb+SizeExpression+ were required to be feed forward by the typeinference -- following a completely different approach to the other requirements which were implicitly added to lists. This caused a large amount of changes in the typeinference which was preferably to be avoided.
+
+We also start to suspect that the wordlength inference might \textit{need} to be a seperate module, split up from the typeinference and run after all the types have been inferred. This code did however not live long, and might even be considered mere curiosities.
+
+\section{The Forth Implementation -- A Desperate Attempt}
+Almost out of desperation for getting something to work. Just to make sure this whole ordeal wasn't impossible -- these changes were made. These changes are also the most insightful in all of these experiments. The changes are available on the git-branch \verb+the-fourth-attempt-now-with-equivelence+ and has git-hash \verb+ba0fa1baab56a725c31f703204da3b7d5f44380a+.
+
+This implementation sent extra information about the largest number possible to come from the computations with all expressions -- similar to the third implementation in Section \ref{sec:Third} but just better written. \verb+ConstraintExpr+ was also extended with the variant \verb+LargestNumber+ which gives out the largest number representable by the wordlength given in -- the opposite of \verb+BitsToRepresent+ and similar to the extra variant made in the second implementation in Section \ref{sec:Second}. The constraints in the typechecking of binary expressions were changed to either take the largest number from the sub-expression or just the largest number from the wordlength this snippet is presented in Figure \ref{fig:BinaryExpression}
+
+\begin{figure}
+\begin{verbatim}
+// Let the typechecker infer the maximum ints 
+let lhs_max = self.visit_expression(&lhs, ctx, generic_list)?;
+let rhs_max = self.visit_expression(&rhs, ctx, generic_list)?;
+match *op {
+   BinaryOperator::Add => {
+       // Create new typevariables
+       let (lhs_t, lhs_size) = self.new_split_generic_int(&ctx.symtab);
+       let (rhs_t, rhs_size) = self.new_split_generic_int(&ctx.symtab);
+       let (result_t, result_size) = self.new_split_generic_int(&ctx.symtab);
+
+       // Create a helper type variable that adds indirection for the unification later
+       let result_max = self.new_generic();
+
+       // Take our best guess of a max value
+       let lhs_max = match lhs_max {
+           Some(max) => ce_var(&max),
+           None => ce_largest(ce_var(&lhs_size)),
+       };
+       let rhs_max = match rhs_max {
+           Some(max) => ce_var(&max),
+           None => ce_largest(ce_var(&rhs_size)),
+       };
+
+      // We know the maximum values add to give a new maximum
+      self.add_constraint(
+          result_max.clone(),
+          lhs_max.clone() + rhs_max.clone(),
+          expression.loc(),
+      );
+      // The maximums implies a size for each of the values
+      self.add_constraint(
+          result_size.clone(),
+          bits_to_store(ce_var(&result_max)),
+          expression.loc(),
+      );
+      self.add_constraint(
+          lhs_size.clone(),
+          bits_to_store(lhs_max.clone()),
+          lhs.loc(),
+      );
+      self.add_constraint(
+          rhs_size.clone(),
+          bits_to_store(rhs_max.clone()),
+          rhs.loc(),
+      );
+      // Link the type variables to the AST
+      self.unify_expression_generic_error(expression, &result_t, &ctx.symtab)?;
+      self.unify_expression_generic_error(&lhs, &lhs_t, &ctx.symtab)?;
+      self.unify_expression_generic_error(&rhs, &rhs_t, &ctx.symtab)?;
+
+      // Return our best guess to make the expressions around aware of us
+      Ok(Some(result_max))
+   }
+   ...
+}
+\end{verbatim}
+\caption{The code adding the constraints for addition in the Spade-compiler}
+\label{fig:BinaryExpression}
+\end{figure}
+
+This approach worked, for some sense of working, there where were
 
 \section{The working implementation}
 \label{sec:theWorkingOne}
