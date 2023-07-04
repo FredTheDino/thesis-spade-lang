@@ -87,7 +87,7 @@ A sufficient basis to understand this work is presented in this chapter.
 \section{Introduction to Compiler Structure}
 What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
 
-Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform semantic analysis -- parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree. Though some compilers interweave these steps, they are usually there in spirit.
+Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing you often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform semantic analysis -- parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree (AST). Though some compilers interweave these steps, they are usually there in spirit.
 
 The Spade compiler has both a lexer step and a parser step which are located in different modules.
 
@@ -364,8 +364,9 @@ Each section describes the thought process, implementation details of most impor
 
 Starting the implementation work we knew parts of what we wanted to achieve. We wanted a more sophisticated version of wordlength inference that handled mathematical expressions with less error. The first step was understanding what was currently happening with the wordlength inference and where the problems where placed. The goal of this implementation was to find out just how much we did not know about the problem of a more sophisticated wordlength inferrer.
 
-
 At the start, the dream was to implement this wordlength inference into the typeinference directly. It was considered somewhat possible since Damas-Hindley-Milner typecheckers have been implemented with sub-typing that could be mapped onto this problem -- one such mapping is Elm with typeinference and extensible records.
+
+In the discussions, some of the less interesting implementation details are deliberately left out. The withheld details aim to make the text clearer and focused.
 
 \section{Context and Goal of These Experiments}
 Most of these implementations were experiments and were not thought to be the solutions most likely to work. The more encompassing and maybe easier solutions have always been adding a separate module for wordlength inference -- in a similar way to how the linear types are checked in Spade at the moment -- or adding a whole new typeinference and typechecker.
@@ -411,7 +412,7 @@ We also start to suspect that the wordlength inference might \textit{need} to be
 \section{The Forth Implementation -- A Desperate Attempt}
 Almost out of desperation for getting something to work. Just to make sure this whole ordeal wasn't impossible -- these changes were made. These changes are also the most insightful in all of these experiments. The changes are available on the git-branch \verb+the-fourth-attempt-now-with-equivelence+ and has git-hash \verb+ba0fa1baab56a725c31f703204da3b7d5f44380a+.
 
-This implementation sent extra information about the largest number possible to come from the computations with all expressions -- similar to the third implementation in Section \ref{sec:Third} but just better written. \verb+ConstraintExpr+ was also extended with the variant \verb+LargestNumber+ which gives out the largest number representable by the wordlength given in -- the opposite of \verb+BitsToRepresent+ and similar to the extra variant made in the second implementation in Section \ref{sec:Second}. The constraints in the typechecking of binary expressions were changed to either take the largest number from the sub-expression or just the largest number from the wordlength this snippet is presented in Figure \ref{fig:BinaryExpression}
+This implementation sent extra information about the largest number possible to come from the computations with all expressions -- similar to the third implementation in Section \ref{sec:Third} but just better written. \verb+ConstraintExpr+ was also extended with the variant \verb+LargestNumber+ which gives out the largest number representable by the wordlength given in -- the opposite of \verb+BitsToRepresent+ and similar to the extra variant made in the second implementation in Section \ref{sec:Second}. The constraints in the typechecking of binary expressions were changed to either take the largest number from the sub-expression or just the largest number from the wordlength this snippet is presented in Figure \ref{fig:BinaryExpression}. The code creates variables from sub-expressions and creates a hidden type-variable \verb+result_max+, then constraints link these different variables together -- all the constraints are equality (\verb+=+) constraints.
 
 \begin{figure}
 \begin{verbatim}
@@ -475,7 +476,11 @@ match *op {
 \label{fig:BinaryExpression}
 \end{figure}
 
-This approach worked, for some sense of working, there where were
+This approach worked, for some definition of working. This solution behaves poorly and causes some very frustrating error messages. Since the hidden type-variable stored in \verb+result_max+ can cause errors in typevariables that are not able to be referenced in the source code of the program -- this kind of code can cause hard to debug errors. The layer of indirection caused by \verb+result_max+ is required to allow unification of int's of various max number into the same size. The \verb+result_max+ variable is also not unified in the unification process which causes us to create a lot of variables with largely the same information without them being synchronized, this can cause inconsistencies with the typechecker in edgecases. There is also extra information that is sent outside the AST and is not recorded. All of this points strongly to a different approach where a separate module tries to infer the wordlength.
+
+\section{The Other Implementations -- Just Curiosities}
+\label{sec:Other}
+There were two more attempts at an implementation inside the typechecker, they are available on the git-branches \verb+the-sixth-attempt+ and \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+. Both these experiments yielded little of interest and are only mentioned out of completeness.
 
 \section{The working implementation}
 \label{sec:theWorkingOne}
