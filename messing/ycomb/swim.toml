@@ -10,3 +10,9 @@ name = "ecpix-5"
 pin_file = "ecpix5.lpf"
 config_file = "openocd-ecpix5.cfg"
 
+[pnr]
+architecture = "ice40"
+device = "iCE40UP5K"
+pin_file = "s1.pcf"
+package = "uwg30"
+allow_unconstrained = true
