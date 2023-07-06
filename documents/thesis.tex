@@ -598,7 +598,8 @@ These changes also made the typechecker aware of the range based semantics of in
 
 An extensions was also made to the wordlength inference methods described in Section \ref{sec:Seven}. A naive method that runs both ''Interval Arithmetic'' and ''Affine Arithmetic'' and returns the subset was also introduced.
 
- - Problems with constants
+The very basic implementation in this thesis does not handle memories and registers. Though supporting them should be very minor work, but requires a lot more verification. There are also questions as to the language features of registers and memories should interact with the range-based syntax of integers. The unification rules from the typechecker are also very strict and disallow things like passing a constant to a function that takes an integer argument that is not constant. How these problems are to be solved is according to the thesis authors a matter of taste, though these problems do exists and needs addressing. 
+
  - The FIR example, show how IA and AA work differently for some values
  - The display example
  - How it handles 
