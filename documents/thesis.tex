@@ -27,9 +27,9 @@
 
 \supervisor{Frans Skarman}
 \examiner{Oscar Gustavson}
-\titleenglish{Seven implementations wordlength inference and one way that actually works}
+\titleenglish{Seven implementations of wordlength inference and one implementation that actually works}
 \subtitleenglish{Wordlength inference in Spade-lang}
-\titleswedish{Seven olika implementationer av ordlängdsinferans och en implementation som faktiskt fungerar}
+\titleswedish{Sju olika implementationer av ordlängdsinferans och en implementation som faktiskt fungerar}
 \subtitleswedish{Ordlängdsinferans i Spade-lang}
 \thesissubject{Datateknik}
 
@@ -497,6 +497,8 @@ This approach worked, for some definition of working. This solution behaves poor
 \label{sec:Other}
 There were two more attempts at an implementation inside the typechecker, they are available on the git-branches \verb+the-sixth-attempt+ and \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+. Both these experiments yielded little of interest and are only mentioned out of completeness.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{The Seventh Implementations -- a Seperate Module}
 \label{sec:Seven}
 After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted. Since the typechecker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inferrence. These changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.
@@ -583,14 +585,30 @@ fn add_and_subtract(x: int<5>) -> int<8> {
 
 This implementation leaves a gaping hole roughly the size of an elephant. How does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the typechecker (except disabling the old wordlenght inferrence), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seamed to work well and it was decided that the best course of action was to extend this implementation.
 
-\
-% - Describe what worked well, and what didn't work well (like that users can't describe ranges)
+\section{The Seventh Implementation Extended -- Doubling Down on Ranges}
+After the raging success of the implementation in Section \ref{sec:Seven} it was decided that some kind of syntax was needed for these changes to more easily communicate the actual ranges of values. This leads to the changes that are available in the git-branch \verb+wordlength-inference/push-the-changes-further+ with git-commit hash \verb+ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e+, these changes are also a merge request on gitlab which is still up at the time of writing (\url{https://gitlab.com/spade-lang/spade/-/merge_requests/208}). The scoping of these changes was very important. A lot of the details and changes discussed are very opinionated and this thesis tries to not focus too closely on the design of programming languages and more on the actual implementation of the language features, though some background and reason will of course be given. 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Evaluation of the Implementation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Evaluation of the Implementation}
-\label{cha:ImplementationEval}
+There was an earlier attempt similar work previously -- the work had been abandoned since the changes in the typechecker and other compilation steps are non-trivial. The previous work is available in a closed merge request from the official Spade repository \url{https://gitlab.com/spade-lang/spade/-/merge_requests/23}. A problem that was outlined in the merge request was that no changes were made in the typechecker and that the changes were purely syntactical -- which caused some implementation details to be harder. Since there now is a working implementation outlined in Section \ref{sec:Seven} of a range based system the constraints in the typeinference-stage need not be updated. Basing the range based syntax on the newly implemented wordlength inference simplifies a lot of details.
+
+The syntax of the Spade language was first of all changed to parse \verb+int+ types differently, the syntax \verb+int<L..H>+ allowing ranges to be specified. The old syntax \verb+int<W>+ was still supported but was syntactic-sugar for \verb!int<!$-(2^{w+1})$\verb!..!$(2^{w+1})-1$\verb!>! (the $+1$ part comes from all integers being signed in Spade) since this would give partial compatibility with older spade-program. In the previous work a lot more syntaxes were added but they were considered extraneous for updating the typeinference.
+
+The \verb+int+ type also had to change to work with 2 generic arguments -- a lower and a higher bound. These types had to be inserted in the typechecker. Making this change in full would require rewriting almost every single spade-compiler test, and would be a substantial amount of work and time, more time than this thesis has been allotted. The decisions to break with the best practices of software development was taken to make sure the thesis could be finished at all. Some of the tests were fixed where it was deemed simple to do so. Most of these changes were very mechanical though. The wordlength inference code also needed to be changed slightly to accept the new ranges as inputs from the typechecker.
+
+These changes also made the typechecker aware of the range based semantics of integers in the wordlength inferrer -- thus the typechecker could be used to propagate type information about these ranges. This made all library functions which previously only used wordlengths work properly with arbitrary range. Users of the spade language could now also specify ranges on their types themselves.
+
+An extensions was also made to the wordlength inference methods described in Section \ref{sec:Seven}. A naive method that runs both ''Interval Arithmetic'' and ''Affine Arithmetic'' and returns the subset was also introduced.
+
+ - Problems with constants
+ - The FIR example, show how IA and AA work differently for some values
+ - The display example
+ - How it handles 
+ - Extensions
+    - Semantic analysis
+        - warn about constant expressions for example
+    - Introduce unsigned integers as an optimization
+    - Better tooling
+    - Work on rules for promoting constants
+    - Another wordlength inferrence method? Maybe record more variables?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Discussion
@@ -637,6 +655,11 @@ git-commit: 11b3d060bc34145fda4918d255b186cb4057f07f
 branchname: the-seventh-attempt-almost-as-simple-as-attempt-one
 git-commit: 889afd61a59f04f60730964b8ae7a2703110dd99
 url: https://gitlab.com/spade-lang/spade/-/merge_requests/200
+
+
+branchname: wordlength-inference/push-the-changes-further
+git-commit: ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e
+url: https://gitlab.com/spade-lang/spade/-/merge_requests/208
 \end{verbatim}
 
 \section{Versions of programs}
