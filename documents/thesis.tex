@@ -530,25 +530,25 @@ for Var in Variables:
 \end{figure}
 
 \subsection{Evaluating the Changes}
-This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+ using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+. A simple bash script was made to record the number of memories used in the FPGA when the command was executed and this was stored in a file. The program was compiled 50 times for the three configurations: ''Old Mode'' -- denoted by ''ONE'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA'', the number of memories used was then feed into a spreadsheet program and produced the graph in the chart in Figure \ref{fig:SpadeCompilations50Bar} and the table in Figure \ref{fig:SpadeCompilations50Table}.
+This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+ using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+. A simple bash script was made to record the number of memories used in the FPGA when the command was executed and this was stored in a file. The program was compiled 50 times for the three configurations: ''Old Mode'' -- denoted by ''ONE'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA'', the number of LUTs used was then feed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
 
-\begin{center}
-\begin{figure}
-  \includegraphics[width=\textwidth]{number-of-luts.pdf}
-  \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inferrence in bar-chart form.}
-  \label{fig:SpadeCompilations50Bar}
-\end{figure}
-\end{center}
+% \begin{center}
+% \begin{figure}
+%   \includegraphics[width=\textwidth]{number-of-luts.pdf}
+%   \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inferrence in bar-chart form.}
+%   \label{fig:SpadeCompilations50Bar}
+% \end{figure}
+% \end{center}
 
 \begin{figure}
 \begin{center}
 \begin{tabular}{l | c c c}
-& ONE & IA & AA \\
+  & ONE (Old version) & IA (Interval Arithmetic) & AA (Affine Arithmetic) \\
 \hline
-AVG&179.6&176.9 & 177.1 \\
-VAR&13.2&6.0&8.2 \\
-MAX&186.0&181.0&183.0 \\
-MIN&171.0&171.0&167.0 \\
+Average number of LUTs&179.6&176.9 & 177.1 \\
+Variance for number of LUTs &13.2&6.0&8.2 \\
+Largest number or LUTs&186.0&181.0&183.0 \\
+Smallest number of LUTs&171.0&171.0&167.0 \\
 \end{tabular}
   \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inferrence in table form.}
   \label{fig:SpadeCompilations50Table}
@@ -556,10 +556,34 @@ MIN&171.0&171.0&167.0 \\
 \end{figure}
 
 
-The Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for ''Interval Arithmetic'' and ''Affine Arithmetic'' when doing wordlength inference. 
+The Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for the number of LUTs generated using ''IA (Interval Arithmetic)'' and ''AA (Affine Arithmetic)''. The average stays almost the same for all methods with ''ONE (The Old Version)'' being a bit higher than the others -- but not by a statistical margin.
 
+These changes did shown promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} was typechecked a lot better by the spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_six_times+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- which is far better than the ''Old'' approach which returns 11 bits. The number of cases where a frivolous truncation was needed has decreased due to these changes. This can lead to clearer and more concise code.
 
-% - Show metrics compared on some example programs
+\begin{figure}
+\begin{verbatim}
+// Old spade wordlength inferrence
+fn add_and_subtract(x: int<5>) -> int<11> {
+  (x - x) + (x - x) + (x - x)
+}
+
+// New spade wordlength inferrence using AA
+fn add_and_subtract(x: int<5>) -> int<0> {
+  (x - x) + (x - x) + (x - x)
+}
+
+// New spade wordlength inferrence using IA
+fn add_and_subtract(x: int<5>) -> int<8> {
+  (x - x) + (x - x) + (x - x)
+}
+\end{verbatim}
+  \caption{A simple spade function showing the difference in the wordlength inference with the new approaches with a focus on addition and subtraction.}
+  \label{fig:CodeThatWorksNow}
+\end{figure}
+
+This implementation leaves a gaping hole roughly the size of an elephant. How does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the typechecker (except disabling the old wordlenght inferrence), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seamed to work well and it was decided that the best course of action was to extend this implementation.
+
+\
 % - Describe what worked well, and what didn't work well (like that users can't describe ranges)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
