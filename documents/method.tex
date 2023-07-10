@@ -1,0 +1,49 @@
+\chapter{Method}
+The method chapter gives a high level overview of the method used in this paper. More detailed steps are delegated to the implementation Chapter \ref{cha:Implementation}. Chapter \ref{cha:Implementation} contains implementation details and analysis of the implementation.
+
+The problem is clearly defined from the previous chapters, especially Section \ref{sec:TheProblem} which goes into detail with examples. Alternatives for this implementation are then presented to the project manager of the Spade compiler -- which also happens to be an author in this paper -- for evaluation and consideration, the motivation for picking these are discussed in Section \ref{sec:ImplementationAlt} and one of them are selected for implementation. Deciding what to implement is critical and is a part of the development process.
+
+After a viable solution is picked, it is time to implement that solution. Since the project is open source special care should be taken to make the changes easily accessible and available after this paper is written, since it is very much possible. A list of the repositories and versions of each software are available in the Appendix \ref{app:VersionsAndGitHashes} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Steps of the implementation and details relevant to the results are discussed in the implementation details section -- Section \ref{sec:ImplementationDetails}. A full evaluation for each of the potential implementations and details about these implementations that are deemed relevant and interesting are mentioned. For full details it is probably best to read the source code. 
+
+% TODO: Fill in this X with a number when I have example programs.
+The implementation is then evaluated based on X example programs in Chapter \ref{cha:ImplementationEval} -- these programs are available in the Appendix \ref{app:Programs} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Here the synthesis tool -- yosys in this thesis -- generates statistics that are collected before and after the changes to the Spade compiler -- including if the program type checked before or not. The information collected for each program with each version of the Spade compiler are:
+
+\todo{Update this}
+\begin{itemize}
+    \setlength\itemsep{0.5em}
+    \item Version of the compiler used
+    \item Does it type check
+    \item TODO: This needs updating!
+    \item Number of wires
+    \item Number of wire bits
+    \item Number of public wires
+    \item Number of public wires bits
+    \item Number of memories
+    \item Number of memory bits
+    \item Number of processes
+    \item Number of cells
+\end{itemize}
+This information is then presented in Chapter \ref{cha:Results} and the discussed in Chapter \ref{cha:Discussion} -- named ``Results`` and ``Discussion``.
+
+\section{Finding Implementations and Creative Problem Solving}
+Solving complex problems is a creative process. Programmings languages are required to be complex since the ideas expressed in them are themselves complex. Complex problems require complex tools. The complexity requires that the programming language
+has a certain degree of quality -- else the programming language quickly becomes useless and frustrating to use. To find a solution of sufficient quality requires trial and error and a good dose of analysis. Understanding partial solutions to a complex problem is a natural way of finding a solution that is higher in quality and hopefully good enough for the programming language to be usable. The Figure \ref{figCreativeProcess} contains a visualization of how these steps integrate with each other.
+
+\begin{center}
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[thick, node/.style = {draw}]
+  \node[node] (a) at (0,0) {Analyze implementation};
+  \node[node] (b) at (0,3) {Implement and find errors};
+  \node[node] (c) at (5,1.5) {External input};
+
+  \draw[->, align=left] (a) to[out=30,in=-30] node[right]{Ideas} (b);
+  \draw[->, align=left] (b) to[out=-150,in=150] node[left]{Deeper understanding} (a);
+  \draw[->] (c) to[out=-90,in=0] node[right]{Concrete ideas} (a);
+  \draw[->] (c) to[out=90,in=0] node[right]{Inspiration} (b);
+\end{tikzpicture}
+\caption{The creative process of solving complex problems according to the author.}
+\label{figCreativeProcess}
+\end{figure}
+\end{center}
+
