@@ -1,6 +1,6 @@
 \chapter{Background}
 \label{chaBackground}
-A sufficient basis to understand this work is presented in this chapter.
+This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book on the subject. Typechecking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
 
 % Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
 % 
@@ -41,7 +41,11 @@ One ``layer`` is often called a ``pass``. Spade is not a multi-pass compiler and
 
 Compilers have to construct a lot of complex information about the program. A visual some find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
 
-\todo{monomorphisation}
+\subsection{Abstract Syntax Tree}
+General purpose programming languages need to be recursive in their structure -- one might want a sub-expression inside another expression for example. Representing this structure inside a computer cannot simply be done with a simple list of values, the data-structures themselves must reflect the structure of the language. One very popular way of storing this recursive syntactical information is by using an abstract syntax tree -- often referred to as an AST.
+
+% Image of an ast
+% Explain how this is usefull
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
@@ -51,8 +55,11 @@ The type checker in Spade is a one directional Damas–Hindley–Milner type che
 
 There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferrer could be used to check the types of the program and can easily be modded into a typechecker. It is infact upon this idea that the Damas–Hindley–Milner typechecker works. In this paper, we will freely refer to typecheckers and work by typeinferrence as both typecheckers and typeinferrence -- even though it might not be the most correct according to the literature we deem it adds variety and clarity to how these systemms function.
 
+
 \subsection{Unification}
 \todo{Fill this in!}
+
+\subsection{monomorphisation}
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
