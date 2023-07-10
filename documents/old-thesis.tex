@@ -126,7 +126,7 @@ The typechecker in Spade is a one directional Damas–Hindley–Milner typecheck
 
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
-\label{sec:IAandAA}
+\label{sec:IAndAA}
 
 There is an excellent explanation of both Interval- and Affine Arithmetic by \citeauthor{src:affAri} -- the following section is a short version to cover the absolute basics of the material.
 
@@ -144,7 +144,7 @@ For a more throughout guide on implementations \citetitle{src:affAir} by \citeau
 When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
 
 The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
-\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmatic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
+\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmetic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
 
 \subsubsection{Interval Arithmetic: An example and Limitations}
 Examples are often helpful.
@@ -160,7 +160,7 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 [-2, 4]
 \end{verbatim}
 
-This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmatic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
+This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmetic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
 
 
 \subsection{Affine Arithmetic}
@@ -221,13 +221,13 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 %   - Calculus of Computation, maybe more literature here
 % - The course on program analysis available on LiU 
 %   - TDDE34 and the presentations there
-% - Previouse literature on Spade
+% - Previous literature on Spade
 %   - Spade: An HDL Inspired by Modern Software Languages and co
 % - Books and papers on typecheckers and compilers books and literature
 %   - Some papers on Henk are interesting
 %   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
 %   - Types and Programming Languages by Ben Pierce
-% - There is a lot of FPGA literature on FPGA optimizaton, here are a few
+% - There is a lot of FPGA literature on FPGA optimization, here are a few
 %    - Constantinides, George A.
 %      Word-length Optimization for Differentiable Nonlinear Systems
 %    - N. Doi and T. Horiyama and M. Nakanishi and S. Kimura
@@ -244,7 +244,7 @@ An outline of the project. This section is a lot more informal and is expected t
 \section{Method idea}
 The method sketch looks like this:
 \begin{enumerate}
-  \item Implement wordlength deduction in Spade in a seperate module
+  \item Implement wordlength deduction in Spade in a separate module
   \item Implement wordlength minimization in Spade
   \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features
@@ -257,7 +257,7 @@ The method sketch looks like this:
 
 The method sketch looks like this:
 \begin{enumerate}
-  \item Implement wordlength deduction in Spade in a seperate module
+  \item Implement wordlength deduction in Spade in a separate module
   \item Implement wordlength minimization in Spade
   \item Make the wordlength deduction toggleable
   \item Find ~8 programs that represent a vide usage of Spade features

@@ -55,14 +55,14 @@ There is also a connected topic of type inference -- a program that guesses the 
 \todo{Fill this in!}
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
-\label{sec:IAandAA}
+\label{sec:IAndAA}
 
 There is an excellent explanation of both Interval- and Affine Arithmetic by \citeauthor{src:affAri} -- the following section is a short version to cover the absolute basics of the material.
 
 Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimate bounds for mathematical functions or things that can be modeled by mathematical functions. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
 \todo{Motivate why we chose to only use AA and IA}
-Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}. For motivations of why are not considered see section \ref{sec:MotivationIAandAA}.
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}. For motivations of why are not considered see section \ref{sec:MotivationIAndAA}.
 
 \subsection{Interval Arithmetic}
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
@@ -73,7 +73,7 @@ For a more throughout guide on implementations \citetitle{src:affAri} by \citeau
 When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
 
 The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
-\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmatic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
+\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmetic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
 
 \subsubsection{Interval Arithmetic: An example and Limitations}
 Examples are often helpful.
@@ -89,7 +89,7 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 [-2, 4]
 \end{verbatim}
 
-This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmatic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
+This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmetic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
 
 
 \subsection{Affine Arithmetic}
@@ -105,7 +105,7 @@ Notice how the first term lacks a noise symbol, this expresses where the center 
 \subsection{Error Explosion for Affine- and Interval Arithmetic}
 Both affine arithmetic and interval arithmetic compensate for unknown factors with a span of potential values. This method is fine for most computations that are small and simple, but this isn't always the case. Some calculations result in large spans of potential values -- since a smaller span gives more certainty and are easier to account for.
 
-For the use case of circuits and FPGAs which are relevant for Spade this can be a large problem. This problem is further discussed in section \ref{sec:MotivationIAandAA}.
+For the use case of circuits and FPGAs which are relevant for Spade this can be a large problem. This problem is further discussed in section \ref{sec:MotivationIAndAA}.
 
 \Todo{Don't know how good this is}
 
@@ -223,13 +223,13 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 %   - Calculus of Computation, maybe more literature here
 % - The course on program analysis available on LiU 
 %   - TDDE34 and the presentations there
-% - Previouse literature on Spade
+% - Previous literature on Spade
 %   - Spade: An HDL Inspired by Modern Software Languages and co
 % - Books and papers on type checkers and compilers books and literature
 %   - Some papers on Henk are interesting
 %   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
 %   - Types and Programming Languages by Ben Pierce
-% - There is a lot of FPGA literature on FPGA optimizaton, here are a few
+% - There is a lot of FPGA literature on FPGA optimization, here are a few
 %    - Constantinides, George A.
 %      Word-length Optimization for Differentiable Nonlinear Systems
 %    - N. Doi and T. Horiyama and M. Nakanishi and S. Kimura

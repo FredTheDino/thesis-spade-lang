@@ -37,7 +37,7 @@ The implementation outlined here did not work -- it was also never expected to w
 \label{sec:Second}
 The second attempt was also very early in the process. Changes are available on the git-branch \verb+the-second-simplest-thing+ and has git-hash \verb+3d92c0e4b28b64104f700c3d299f62e7938cb016+.
 
-Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which is the opposite of the \verb+BitsToRepresent+ expression which handles logarithms. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths at least somewhat freely. This idea and implementation -- was like the implemenetation in Section \ref{sec:First} -- not supposed to solve the entire problem and is not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference.
+Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which is the opposite of the \verb+BitsToRepresent+ expression which handles logarithms. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths at least somewhat freely. This idea and implementation -- was like the implementation in Section \ref{sec:First} -- not supposed to solve the entire problem and is not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference.
 
 When reviewing the code for this report an error in the original code was also found -- the function \verb+check_expr_for_replacement+ should refer to \verb+BitsToRange+ on line $1036$ -- the changes presented in this section never compiled.
 
@@ -45,11 +45,11 @@ These new constraints did not suffice, since all of the constraints were equalit
 
 \section{The Third Implementation -- Considering Equations}
 \label{sec:Third}
-The third attempt focused on adding equations and added a seperate constraint language. These constraints are part of the typeinference.
+The third attempt focused on adding equations and added a separate constraint language. These constraints are part of the typeinference.
 
 A new set of constraints was added giving \verb+ConstraintExpr+ and \verb+Requirement+ a new friend called \verb+SizeExpression+. Aside from the obvious technical-debt added with a whopping 3 different kinds of constraints that express almost the same thing -- the solution was deemed too ''ugly''. The constraints needed for \verb+SizeExpression+ were required to be feed forward by the typeinference -- following a completely different approach to the other requirements which were implicitly added to lists. This caused a large amount of changes in the typeinference which was preferably to be avoided.
 
-We also start to suspect that the wordlength inference might \textit{need} to be a seperate module, split up from the typeinference and run after all the types have been inferred. This code did however not live long, and might even be considered mere curiosities.
+We also start to suspect that the wordlength inference might \textit{need} to be a separate module, split up from the typeinference and run after all the types have been inferred. This code did however not live long, and might even be considered mere curiosities.
 
 \section{The Forth Implementation -- A Desperate Attempt}
 Almost out of desperation for getting something to work. Just to make sure this whole ordeal wasn't impossible -- these changes were made. These changes are also the most insightful in all of these experiments. The changes are available on the git-branch \verb+the-fourth-attempt-now-with-equivelence+ and has git-hash \verb+ba0fa1baab56a725c31f703204da3b7d5f44380a+.
@@ -126,9 +126,9 @@ There were two more attempts at an implementation inside the typechecker, they a
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{The Seventh Implementations -- a Seperate Module}
+\section{The Seventh Implementations -- a Separate Module}
 \label{sec:Seven}
-After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted. Since the typechecker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inferrence. These changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.
+After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted. Since the typechecker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inference. These changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.
 
 The idea for the implementation was to walk the entire AST after typechecking had run and monomorphisation was complete -- each entity was given to the wordlength-inference module called \verb+spade-wordlength-inference+. The algorithm from Figure \ref{fig:WLIAlgo} was then applied. Visit the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+, this is called an equation. Pick out all typevariables which are \verb+int<_>+ from the previous step, populating a mapping between type-variables and their wordlength. Then loop over all constraints from step 1 and try to evaluate the right-hand side. The evaluation method can be one of three modes: ''Old Mode'', ''Affine Arithmetic'' or ''Interval Arithmetic'', these options could also be enabled with the environment variable \verb+SPADE_INFER_METHOD+ to allow it to work with the swim buildsystem. If evaluation succeeded add the new variable to a new known set of variables and check there are no contradictions. Stop the loop if no more progress is made or we have looped as many times as there are equations. The result is then unified back into the AST for safekeeping. There are of course more details, and the Rust code for wordlenght inference is hopefully quite readable. If you are interested I would recommend reading the source code directly. 
 
@@ -164,7 +164,7 @@ This implementation of the spade compiler was then run on the example program \v
 % \begin{center}
 % \begin{figure}
 %   \includegraphics[width=\textwidth]{number-of-luts.pdf}
-%   \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inferrence in bar-chart form.}
+%   \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inference in bar-chart form.}
 %   \label{fig:SpadeCompilations50Bar}
 % \end{figure}
 % \end{center}
@@ -179,7 +179,7 @@ Variance for number of LUTs &13.2&6.0&8.2 \\
 Largest number or LUTs&186.0&181.0&183.0 \\
 Smallest number of LUTs&171.0&171.0&167.0 \\
 \end{tabular}
-  \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inferrence in table form.}
+  \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inference in table form.}
   \label{fig:SpadeCompilations50Table}
 \end{center}
 \end{figure}
@@ -191,17 +191,17 @@ These changes did shown promise in the usability of the language. Snippets like 
 
 \begin{figure}
 \begin{verbatim}
-// Old spade wordlength inferrence
+// Old spade wordlength inference
 fn add_and_subtract(x: int<5>) -> int<11> {
   (x - x) + (x - x) + (x - x)
 }
 
-// New spade wordlength inferrence using AA
+// New spade wordlength inference using AA
 fn add_and_subtract(x: int<5>) -> int<0> {
   (x - x) + (x - x) + (x - x)
 }
 
-// New spade wordlength inferrence using IA
+// New spade wordlength inference using IA
 fn add_and_subtract(x: int<5>) -> int<8> {
   (x - x) + (x - x) + (x - x)
 }
@@ -210,7 +210,7 @@ fn add_and_subtract(x: int<5>) -> int<8> {
   \label{fig:CodeThatWorksNow}
 \end{figure}
 
-This implementation leaves a gaping hole roughly the size of an elephant. How does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the typechecker (except disabling the old wordlenght inferrence), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seamed to work well and it was decided that the best course of action was to extend this implementation.
+This implementation leaves a gaping hole roughly the size of an elephant. How does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the typechecker (except disabling the old wordlenght inference), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seamed to work well and it was decided that the best course of action was to extend this implementation.
 
 \section{The Seventh Implementation Extended -- Doubling Down on Ranges}
 \label{sec:Seven2}
@@ -229,7 +229,7 @@ An extensions was also made to the wordlength inference methods described in Sec
 The very basic implementation in this thesis does not handle memories and registers. Though supporting them should be very minor work, but requires a lot more verification. There are also questions as to the language features of registers and memories should interact with the range-based syntax of integers. The unification rules from the typechecker are also very strict and disallow things like passing a constant to a function that takes an integer argument that is not constant. How these problems are to be solved is according to the thesis authors a matter of taste, though these problems do exists and needs addressing. 
 
 \subsection{Evaluation the Changes}
-After a change has been made it needs to be verified and tested. A custom version of the compiler with the changes described in Section \ref{sec:Seven2}. Each program was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' -- and a clean of the build environment was conducted between all steps. The changes breaks a lot of compatibility with older Spade-versions which severly limits the number of Spade programs that can be used since a dependency written for a different version of the compiler is not going to compile.
+After a change has been made it needs to be verified and tested. A custom version of the compiler with the changes described in Section \ref{sec:Seven2}. Each program was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' -- and a clean of the build environment was conducted between all steps. The changes breaks a lot of compatibility with older Spade-versions which severely limits the number of Spade programs that can be used since a dependency written for a different version of the compiler is not going to compile.
 
 \subsubsection{spade-memory-display}
 The small library \verb+spade-memory-display+ was used for evaluation. The changes to the compiler required changes to the library code in order to compile, this made it unclear how to compare directly with older versions of the compiler since small code changes can have large changes in the output. The library code was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' with \verb+swim clean+ ran between each build.
