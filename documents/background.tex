@@ -42,24 +42,121 @@ One ``layer`` is often called a ``pass``. Spade is not a multi-pass compiler and
 Compilers have to construct a lot of complex information about the program. A visual some find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase.
 
 \subsection{Abstract Syntax Tree}
-General purpose programming languages need to be recursive in their structure -- one might want a sub-expression inside another expression for example. Representing this structure inside a computer cannot simply be done with a simple list of values, the data-structures themselves must reflect the structure of the language. One very popular way of storing this recursive syntactical information is by using an abstract syntax tree -- often referred to as an AST.
+General purpose programming languages need to be recursive in their structure -- one might want a sub-expression inside another expression for example. Representing this structure inside a computer cannot simply be done with a simple list of values, the data-structures themselves must reflect the structure of the language. One very popular way of storing this recursive syntactical information is by using an abstract syntax tree (often referred to as an AST). An AST describes the structure of the program.
 
-% Image of an ast
-% Explain how this is usefull
+
+\begin{figure}
+\centering
+\begin{subfigure}{.5\textwidth}
+\begin{verbatim}
+<expr> ::= <num>
+         | <expr> + <expr>
+
+<num>  ::= 0 | 1 | 2 | 3 | 4
+\end{verbatim}
+\end{subfigure}
+  \caption{A simple BNF-like syntax-definition for integer expressions.}
+  \label{fig:bnfExpr}
+\end{figure}
+For example, consider the grammar for integer addition expressions described in this psuedo-BNF format shown in Figure \ref{fig:bnfExpr}. The syntax understands whole numbers and the basic arithmetic operations addition (\verb!+!) and subtraction (\verb!-!). Most notable is that the syntax is recursive and expressions can contain expressions in themselves. This BNF-like syntax is a bit simplified and the grammar is not necessarily in a good format. A better grammar would handle order of operations and avoid ambiguities -- which will be explained later.
+
+We can write a simple ''program'' that is a part of the language described by Figure \ref{fig:bnfExpr}. Some small valid ''programs'' are: \verb+1+, and \verb!1 + 1!. But we will focus on the more complex example in Figure \ref{fig:progExpr} -- which shows two additions.
+
+\begin{figure}
+\centering
+\begin{subfigure}{.5\textwidth}
+\begin{verbatim}
+1 + 2 + 3
+\end{verbatim}
+\end{subfigure}
+  \caption{A simple integer expression in the simple integer expression language with 3 terms and 2 additions.}
+  \label{fig:progExpr}
+\end{figure}
+
+Looking at Figure \ref{fig:progExpr} it is obvious that the expressions should evaluate to 6. What is not obvious is how a computer should evaluate this expression. We can namely construct two different abstract syntax trees (and two different parse trees) for the program in Figure  \ref{fig:progExpr}. When parsing the program to a syntax tree we have to make the conscious decisions of what node is placed on top.
+
+
+\begin{figure}
+\centering
+\begin{subfigure}{.5\textwidth}
+\centering
+\begin{tikzpicture}[
+  sibling distance=3em,
+  level distance=3em,
+  every node/.style = {shape=rectangle, rounded corners, draw, align=center}
+]
+  \node {Left associative: 1 + 2 + 3}
+          child {node {+}
+            child {node {+}
+              child {node {1}}
+              child {node {2}}
+            }
+            child {node {3}}
+          };
+\end{tikzpicture}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+\centering
+\begin{tikzpicture}[
+  sibling distance=3em,
+  level distance=3em,
+  every node/.style = {shape=rectangle, rounded corners, draw, align=center}
+]
+  \node {Right associative: 1 + 2 + 3}
+          child {node {+}
+            child {node {1}}
+            child {node {+}
+              child {node {2}}
+              child {node {3}}
+            }
+          };
+\end{tikzpicture}
+\end{subfigure}
+  \caption{Two example syntax tree -- illustrating ambiguity in the grammar and the difference between left and right associativity.}
+  \label{fig:astExpr}
+\end{figure}
+
+The Figure \ref{fig:astExpr} shows the two different associativities that causes \verb!1 + 2 + 3! to be interpreted as either \verb!(1 + (2 + 3))! or \verb!((1 + 2) + 3)!. For the observant reader there is not much difference between these mathematical expressions -- they are even considered equivalent since addition is associative for integers. The associativity property is unfortunately very rare in the real world of effectfull-programming. If evaluating an expression in this language was effectfull -- for example the result was printed, these different associativities would have different outputs. One of the programs would print \verb+1 2 3 3 6+ while the other would print \verb+1 2 3 5 6+ (ofcourse dependent on how the expressions are evaluated). This is what is called an ambiguity -- and an abstract syntax tree makes it clear how the compiler internally understands this addition.
+
+There are different operations which can be done to an abstract syntax tree. In our very simple example of integer additions it would make sense to fold the constants and replace the entire AST with the constant 6 -- but to do that we would have to know the associativity of the \verb!+!-operator.
+
+The AST is a very popular format to output from the parsing stage, since it is flexible. In the Spade-compiler the AST is annotated with type information as it is discovered -- this annotated AST is then feed either to a language server or a code generation phase.
 
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
 Type checking is a way of making sure the program is internally consistent, there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The type checker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave a record`` \cite{src:spadeAnHDL}. Typechecking has shown to reduce some kinds of programming errors and can in some cases even suggest what functions to use.
 
-The type checker in Spade is a one directional Damas–Hindley–Milner type checker. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
+The type checker in Spade is a one directional Damas–Hindley–Milner typechecker. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
-There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferrer could be used to check the types of the program and can easily be modded into a typechecker. It is infact upon this idea that the Damas–Hindley–Milner typechecker works. In this paper, we will freely refer to typecheckers and work by typeinferrence as both typecheckers and typeinferrence -- even though it might not be the most correct according to the literature we deem it adds variety and clarity to how these systemms function.
-
+There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferer could be used to check the types of the program and can easily be modded into a typechecker. It is infact upon this idea that the Damas–Hindley–Milner typechecker works. In this paper, we will freely refer to typecheckers and work by typeinference as both typecheckers and typeinferrence -- even though it might not be the most correct according to the literature we deem it adds variety and clarity to how these systems function.
 
 \subsection{Unification}
-\todo{Fill this in!}
+A Damas-Hindley-Milner typechecker is a very simple typechecker and is based upon one simple idea -- typeinference is a constraint satisfaction problem with \textbf{only} equivalence-constraints. The idea of the typechecking and typeinference is to simply find types that has to be equal for the program to function. Most of these small rules are painfully simple -- like: ''adding two numbers gives you a number'', or ''calling a function results in a type with the return value of the called function''. What really drives these simple rules is a process called unification. Unification is a way to propagate these equality constraints. This is proved to be correct, given that all expressions without sub-expressions have a type.
 
-\subsection{monomorphisation}
+This unification property is also found in logic-programming, which is not a coincidence but rather an effect of the Curry–Howard isomorphism. \cite{src:curryHowardIso}
+
+I find examples useful to quickly get basic understanding of a topic, so I will outline the typechecking of a simple program and how the unification step would work. We will typecheck the simple program in Figure \ref{fig:progUni}.
+
+\begin{figure}
+\centering
+  \begin{subfigure}{.5\textwidth}
+\begin{verbatim}
+fn add<A> : (A, A) -> A
+
+fn main { add(add(1, 2), "abc") }
+\end{verbatim}
+  \end{subfigure}
+  \caption{A simple dummy program to show unification. A simple ''add'' function is defined which takes 2 arguments of the same type and returns that type. Types are denoted with uppercase letters and language constructs are defined using lowercase letters.}
+  \label{fig:progUni}
+\end{figure}
+
+Let us assume that we have two types in our language \verb+Int+ and \verb+Str+. We start by giving each construction a unique type variable (this is mainly to make it simple to explain, there are more resource efficient ways of accomplishing this). We then evaluate the syntax tree bottom upp. We will also assume the rules: (1) integer-constants have the type \verb+Int+, (2) String-constants have the type \verb+Str+, (3) Calling a function means the types of the arguments and parameters are the same and the whole expressions evaluates to the return type of the function. Evaluating rule (3) always gives a new type ''A'', we will keep track of these with numbered suffixes. These 3 simple rules let us typecheck and typeinfer the expression in the main-function.
+
+In this explanation the \verb+:+ operator denotes that an expression on the left has a known type on the right, so \verb+1:Int+ means the expressions \verb+1+ has type \verb+Int+. We will also denote the unifications of types, so \verb+A9=A8+ means the type \verb+A9+ is the same types as \verb+A8+. We first of all know the type of all the simple expressions -- thanks to rules (1) and (2) -- that means \verb+1:Int+, \verb+2:Int+ and \verb+"abc":Str+. We can now solve \verb+add(1, 2)+ by applying rule (3) to \verb+add:(A0, A0) -> A0+ and \verb+add(1, 2):T1+, we can unify \verb+(Int, Int)+ and \verb+(A0, A0)+, which gives \verb+A0=Int+. We also get \verb+T1=A0=Int+ which gives us \verb+add(1, 2):Int+. The more complex expression is now inferable \verb+add(add(1, 2), "abc"):T2+, we unify \verb+(T1, Str)+ and \verb+(A1, A1)+ which gives us a contradiction, since \verb+T1=Int=/=Str+ -- this would result in a type error which might throw an error.
+
+In conclusion, unification lets us define two types as the same type and send all this information as far as we want in a program -- there are programming languages with global type-inference for example. But the method described by Damas-Hindley-Milner is limited to equality-constraints which has some limitations in what types can be expressed.
+
+\section{monomorphisation}
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
@@ -75,6 +172,7 @@ Though affine arithmetic is more sophisticated it does not always produce better
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
 
 For a more throughout guide on implementations \citetitle{src:affAri} by \citeauthor{src:affAri} is worth your time, this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
+
 
 \subsubsection{Interval Arithmetic Special values}
 When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
