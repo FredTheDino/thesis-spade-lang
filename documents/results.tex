@@ -132,6 +132,8 @@ After doing a lot of thinking and reasoning we decided to see how a separate mod
 
 The idea for the implementation was to walk the entire AST after typechecking had run and monomorphisation was complete -- each entity was given to the wordlength-inference module called \verb+spade-wordlength-inference+. The algorithm from Figure \ref{fig:WLIAlgo} was then applied. Visit the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+, this is called an equation. Pick out all typevariables which are \verb+int<_>+ from the previous step, populating a mapping between type-variables and their wordlength. Then loop over all constraints from step 1 and try to evaluate the right-hand side. The evaluation method can be one of three modes: ''Old Mode'', ''Affine Arithmetic'' or ''Interval Arithmetic'', these options could also be enabled with the environment variable \verb+SPADE_INFER_METHOD+ to allow it to work with the swim buildsystem. If evaluation succeeded add the new variable to a new known set of variables and check there are no contradictions. Stop the loop if no more progress is made or we have looped as many times as there are equations. The result is then unified back into the AST for safekeeping. There are of course more details, and the Rust code for wordlenght inference is hopefully quite readable. If you are interested I would recommend reading the source code directly. 
 
+\Todo{Mention something about the implementation using BigInt and BigRational -- this should also give more discussion.}
+
 \begin{figure}
 \begin{verbatim}
 if InferMethod == OLD then return

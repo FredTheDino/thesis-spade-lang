@@ -156,7 +156,10 @@ In this explanation the \verb+:+ operator denotes that an expression on the left
 
 In conclusion, unification lets us define two types as the same type and send all this information as far as we want in a program -- there are programming languages with global type-inference for example. But the method described by Damas-Hindley-Milner is limited to equality-constraints which has some limitations in what types can be expressed.
 
-\section{monomorphisation}
+\subsection{Monomorphisation}
+After all the typechecking and typeinference has been done, something called monmorphisation is done. This phase make generic functions into concrete function -- that is to say all functions with generics like \verb+fn add<A>(x: A, y: A) -> A+ are given concrete types like \verb+fn add(x: i32, y: i32) -> i32+. This means the same code can lead to multiple function bodies. Monomorphisation creates a new instance of a function for each of the generic arguments given, and Rust does something similar. \cite{src:rustMono}
+
+Monomorphisation is often considered a performance optimization, but for HDLs this step is absolutely required.
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
@@ -165,20 +168,16 @@ There is an excellent explanation of both Interval- and Affine Arithmetic by \ci
 
 Affine arithmetic and interval arithmetic and two common ways to estimate. They can be applied to estimate bounds for mathematical functions or things that can be modeled by mathematical functions. They also have a place in static analysis of programs, which is the focuses of this thesis. This section describes what these concepts are, references literature if you want to read more and shows their roll in static analysis of programs. These methods are often referred to as over-estimation.
 
-\todo{Motivate why we chose to only use AA and IA}
-Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed \cite{src:MEgPC}. For motivations of why are not considered see section \ref{sec:MotivationIAndAA}.
+Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC \cite{src:MEgPC} and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed. ME-gPC was not considered for this thesis due to its complexity -- but it is a good extension to the techniques explained in this paper. Affine arithmetic and interval arithmetic are the simplest methods that offer enough complexity to be interesting.
 
 \subsection{Interval Arithmetic}
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression.
 
 For a more throughout guide on implementations \citetitle{src:affAri} by \citeauthor{src:affAri} is worth your time, this section will cover the basics that are needed to understand the concept and understand this thesis. A full description of the field is out of scope.
-
-
 \subsubsection{Interval Arithmetic Special values}
 When doing static program analysis, some extra values are often defined. For example, it is okay to have an interval where one value is infinite. This interval $[5, \infty]$ is perfectly valid.
 
 The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated. It might seem useless at a glance, but is required to do more sophisticated static analysis.
-\Todo{IA, have shorter definitions written in ``affine-and-interval-arithmetic.md``, maybe just refer to the original sources since it is not really relevant except for the implementation, unless we get a specific result due to one of them.}
 
 \subsubsection{Interval Arithmetic: An example and Limitations}
 Examples are often helpful.
@@ -196,24 +195,22 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 
 This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmetic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
 
-
 \subsection{Affine Arithmetic}
-Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances and a combination is currently thought to be the current state of the art. 
+Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances and a combination is currently thought to be the current state of the art. \cite{src:affAri}
 
 \subsubsection{How Affine Arithmetic works}
-In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic.
+In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a natural number) and the numbers half width ($x_i$ where $i$ is a natural number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can them be combined using similar rules to interval arithmetic. \cite{src:affAri}
 
 Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that.
 
-\Todo{Something about how multiplication works}
+\subsection{When Interval Arithmetic Is Better Than Affine Arithmetic}
+Affine arithmetic may seam like the superior option in all cases -- this is not the case. Affine arithmetic has trouble with multiplication, and has to add extra noise in order to constantly overestimate. This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fair a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and would give us a range poking out below $0$ while interval arithmetic would correctly infer the lower bound of $0$.
+
+When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are too large, we can take the subset of the guesses and be sure of the correctness.
 
 \subsection{Error Explosion for Affine- and Interval Arithmetic}
+\label{sec:ee}
 Both affine arithmetic and interval arithmetic compensate for unknown factors with a span of potential values. This method is fine for most computations that are small and simple, but this isn't always the case. Some calculations result in large spans of potential values -- since a smaller span gives more certainty and are easier to account for.
-
-For the use case of circuits and FPGAs which are relevant for Spade this can be a large problem. This problem is further discussed in section \ref{sec:MotivationIAndAA}.
-
-\Todo{Don't know how good this is}
-
 \cite{src:affAri}
 
 \section{Wordlength Inference and Typechecking in Spade}
@@ -275,26 +272,25 @@ fn f(a: int<3>) -> int<4> {
 entity main(clk: clock, rst: bool) -> int<4> {
   f(3)
 }
-Error: aborting due to previous error
 \end{verbatim}
 \end{center}
 \label{fig:SimpleCorrectSpade}
 \caption{``simple\_correct.spade`` A spade program that does compile, which is very similar to the program in Figure \ref{fig:SimpleFaultSpade}}
 \end{figure}
 
-\todo{Maybe change to using screen shoots? But I like the idea of it being text since it's usually easier to read... Hmm...}
-\todo{Move this to the typechecking section?}
-The Spade compiler implements a the Damas-Hindley–Milner type checker -- a fast and modern type checker for simple type systems. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{fig:SimpleFaultSpade} and \ref{fig:SimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself. How this should be changed and to what is the central topic of this thesis.
+The Spade compiler implements a the Damas-Hindley–Milner typechecker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{fig:SimpleFaultSpade} and \ref{fig:SimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself. How this should be changed and to what is the central topic of this thesis.
+
+\section{Field Programmable Gate Array}
+A field programmable gate array (FPGA) is a kind of programmable hardware. An FPGA is slower and draw more power than a ''normal'' circuit but FPGAs allow very fast iteration since they are programmable. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by busses -- each component can then be programmed and connected individually. \cite{src:FPGA}
+
+An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by highlevel languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows massive parallelism since each part of the circuit has to complete before the next iteration can be taken. This makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why state (except memories) is immutable in Spade.
 
 \section{Spade}
-Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesised -- creating a faster iteration loop.
+Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesized -- creating a faster iteration loop.
 \cite{src:spadeSomething} \cite{src:spadeAnHDL}
 
-% \section{FPGA}
-\Todo{Explain what an FPGA is and what makes it different from micro controllers}
-
-\Todo{I need to explain Swim}
-
+\subsection{Swim}
+The Spade-language has a build-tool call Swim. Swim orchestrates things like running routers and synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Related Work
@@ -317,9 +313,12 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 
 \cite{src:HLSandOpt}
 
-\Todo{Software development methods}
+\section{Agile Software Development Methods: Review and Analysis}
+\citeauthor{src:Agile} gives a comprehensive academic analysis of what agile software development is. The definition is vague but focuses on the slower iteration times. This kind of methodology works better if tools are improved which multiple of the methodologies suggest are important.
 
+Agile methodologies could of course also be applied in hardware design, and improved compiler designs and tooling makes this possible.
 
+\cite{src:Afile}
 
 % # Planned literature supporting the thesis
 % - Books and papers on IA and AA
