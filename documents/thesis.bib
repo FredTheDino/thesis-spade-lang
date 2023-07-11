@@ -51,3 +51,21 @@
       archivePrefix={arXiv},
       primaryClass={cs.SE}
 }
+
+@inproceedings{src:ConFPGA,
+author = {Frigo, Jan and Gokhale, Maya and Lavenier, Dominique},
+title = {Evaluation of the Streams-C C-to-FPGA Compiler: An Applications Perspective},
+year = {2001},
+isbn = {1581133413},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/360276.360326},
+doi = {10.1145/360276.360326},
+abstract = {The Streams-C compiler ([5]) synthesizes hardware circuits for reconfigurable FPGA-based computers from parallel C programs. The Streams-C language consists of a small number of libraries and intrinsic functions added to a synthesizable subset of C, and supports a communicating process programming model. The processes may be either software or hardware processes, and the compiler manages communication among the processes transparently to the programmer. For the hardware processes, the compiler generates Register-Transfer-Level (RTL) VHDL, targeting multiple FPGAs with dedicated memories. For the software processes, a multi-threaded software program is generated.The Streams-C language and compiler offer a very high level of expressivity for reconfigurable computing application development, particularly for stream-processing applications. We find this is reflected in productivity, for a factor of up to 10 times improvement in time to produce a program. However, use of the tool in the ``real world'' is predicated on performance: only if such a compiler can deliver performance comparable to hand-coded performance will it be used in practice.This paper presents an application study of the Streams-C compiler. Four applications have been written in Streams-C and compiled to the AMC Wildforce board containing Xilinx 4036's. Those same applications have been hand-coded in a combination of RTL and structural VHDL. We compare performance of the generated code with the hand-optimized code. Our study shows that the compiler-generated designs are 1.37--4 times the area and $1/2$--1 times the clock frequency of the hand designs. We find that the compiler, based on the SUIF infrastructure, can be greatly improved through various standard compiler optimizations that are not currently being exploited. Thus we are currently re-writing a public domain version of Streams-C to better optimize and target the Virtex chip.},
+booktitle = {Proceedings of the 2001 ACM/SIGDA Ninth International Symposium on Field Programmable Gate Arrays},
+pages = {134–140},
+numpages = {7},
+keywords = {configurable computing, silicon compiler, FPGA design tools, hardware-software co-design, high-level synthesis, FPGA},
+location = {Monterey, California, USA},
+series = {FPGA '01}
+}

@@ -297,6 +297,8 @@ The Spade-language has a build-tool call Swim. Swim orchestrates things like run
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Related Work}
+Wordlength inference is a topic that is studied quite a bit -- but few methods focus of the interplay between compilers and wordlength inference. The wordlenght inference proposed in this thesis is also a lot more focused on correctness rather than optimizing the resource usage, and thus the focus is quite different. The study of these kinds of inference methods related to FPGA compiler design is however a topic that is much less studied.
+
 \Todo{Needs a lot more content here, and it is a very well studied subject}
 
 \section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
@@ -314,11 +316,14 @@ Problems with the IEEE floating point numbers are mentioned, for one how the imp
 \cite{src:HLSandOpt}
 
 \section{Agile Software Development Methods: Review and Analysis}
-\citeauthor{src:Agile} gives a comprehensive academic analysis of what agile software development is. The definition is vague but focuses on the slower iteration times. This kind of methodology works better if tools are improved which multiple of the methodologies suggest are important.
+\citeauthor{src:Agile} gives a comprehensive academic analysis of what agile software development is. The definition is vague but focuses on the slower iteration times. This kind of methodology works better if tools are improved which multiple of the methodologies suggest are important. \cite{src:Afile}
 
-Agile methodologies could of course also be applied in hardware design, and improved compiler designs and tooling makes this possible.
+Agile methodologies could of course also be applied in hardware design, and improved compiler designs and tooling makes this possible. The work in this thesis could fit neatly into allowing different kinds of development methodologies for hardware development.
 
-\cite{src:Afile}
+\section{Evaluation of the streams-C C-to-FPGA compiler: an applications perspective}
+\citeauthor{src:ConFPGA} discuss compiler optimizations that can be done on Streams-C. Streams-C is a subset of the C-programming language that can be used on FPGAs. The study shows that some simple optimizations can rival hand optimized VHDL. The study implements a simple poly-phase filter and uses that for comparisons. \cite{src:ConFPGA}
+
+The number of experiments is perhaps a bit small -- a singular experiment might have been cherry-picked. The results however are promising and a similar approach is used in this thesis. Though this thesis is not as focused on optimizations.
 
 % # Planned literature supporting the thesis
 % - Books and papers on IA and AA
