@@ -285,10 +285,13 @@ A field programmable gate array (FPGA) is a kind of programmable hardware. An FP
 
 An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by highlevel languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows massive parallelism since each part of the circuit has to complete before the next iteration can be taken. This makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why state (except memories) is immutable in Spade.
 
+\subsection{Place and Route}
+Place and Route, sometimes referred to as PNR in this thesis is when the program is encoded as hardware, which requires routing the information in the actual chip and deciding what node is responsible for what computation. This is similar to how the routes are placed on a ''normal'' circuit and is considered a computationally hard problem. Since the problem of PNR is computationally hard, a stochastic algorithm is applied, meaning the same program might not generate identical encoded hardware. When trying to measure the resource usage of FPGA programs this step needs to be run multiple times, since one run could always be a fluke.
+
 \section{Spade}
 Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesized -- creating a faster iteration loop.
 \cite{src:spadeSomething} \cite{src:spadeAnHDL}
 
 \subsection{Swim}
-The Spade-language has a build-tool call Swim. Swim orchestrates things like running routers and synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
+The Spade-language has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
