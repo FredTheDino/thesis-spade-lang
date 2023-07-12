@@ -5,7 +5,7 @@ The problem is clearly defined from the previous chapters, especially Section \r
 
 After a viable solution is picked, it is time to implement that solution. Since the project is open source special care should be taken to make the changes easily accessible and available after this paper is written, since it is very much possible. A list of the repositories and versions of each software are available in the Appendix \ref{app:VersionsAndGitHashes} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. Steps of the implementation and details relevant to the results are discussed in the implementation details section -- Section \ref{sec:ImplementationDetails}. A full evaluation for each of the potential implementations and details about these implementations that are deemed relevant and interesting are mentioned. For full details it is probably best to read the source code. 
 
-The implementation is then evaluated based on 7 example programs in Chapter \ref{cha:ImplementationEval} -- these programs are available in the Appendix \ref{app:Programs} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. The programs will also be evaluated by a place and route, this thesis uses nextpnr version \verb+0.6-29-g54b20457+ for all the PNR done in this thesis. All the statistics from the PNR step is then saved, and all the experiments are run at least fifty (50) times to give some credibility to the results. The most interesting metric is the number of LUTs used in the final design. The number of LUTs will be the primary basis of analysis.
+The implementation is then evaluated using some simple expressions, a FIR-filter (available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}) program and spade-memory-display (the modified version is available at \href{https://github.com/FredTheDino/spade-memory-display-wli-fork}) these programs are available in the Appendix \ref{app:Programs} and the \href{https://github.com/FredTheDino/thesis-spade-lang}{git-repository for this thesis}. The programs will also be evaluated by a place and route, this thesis uses nextpnr version \verb+0.6-29-g54b20457+ for all the PNR done in this thesis. All the statistics from the PNR step is then saved, and all the experiments are run at least fifty (50) times to give some credibility to the results. The most interesting metric is the number of LUTs used in the final design. The number of LUTs will be the primary basis of analysis.
 
 This information is then presented in Chapter \ref{cha:Results} and discussed in Chapter \ref{cha:Discussion}.
 
@@ -30,5 +30,3 @@ has a certain degree of quality -- else the programming language quickly becomes
 \label{figCreativeProcess}
 \end{figure}
 \end{center}
-
-\Todo{Show the generics with ranges that can now be used}

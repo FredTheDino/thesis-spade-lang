@@ -212,7 +212,28 @@ After the raging success of the implementation in Section \ref{sec:Seven} it was
 
 There was an earlier attempt similar work previously -- the work had been abandoned since the changes in the typechecker and other compilation steps are non-trivial. The previous work is available in a closed merge request from the official Spade repository \url{https://gitlab.com/spade-lang/spade/-/merge_requests/23}. A problem that was outlined in the merge request was that no changes were made in the typechecker and that the changes were purely syntactical -- which caused some implementation details to be harder. Since there now is a working implementation outlined in Section \ref{sec:Seven} of a range based system the constraints in the typeinference-stage need not be updated. Basing the range based syntax on the newly implemented wordlength inference simplifies a lot of details.
 
-The syntax of the Spade language was first of all changed to parse \verb+int+ types differently, the syntax \verb+int<L..H>+ allowing ranges to be specified. The old syntax \verb+int<W>+ was still supported but was syntactic-sugar for \verb!int<!$-(2^{w+1})$\verb!..!$(2^{w+1})-1$\verb!>! (the $+1$ part comes from all integers being signed in Spade) since this would give partial compatibility with older spade-program. In the previous work a lot more syntaxes were added but they were considered extraneous for updating the typeinference.
+\begin{figure}
+  \begin{verbatim}
+fn twice<#A, #B, #M, #N>(x: int<A..B>) -> int<M..N> {
+  2 * x
+}
+
+fn add_one<#A, #B, #M, #N>(x: int<A..B>) -> int<M..N> {
+  x + 1
+}
+
+entity main(clk: clock, rst: bool) -> int<14..14> {
+  let a: int<6..6> = twice(3);
+  let b: int<7..7> = add_one(a);
+  let c: int<14..14> = twice(b);
+  c
+}
+  \end{verbatim}
+  \caption{A small spade program that shows the new range syntax in context and gives an example of how integer range information is now more detailed.}
+  \label{fig:BetterProgram}
+\end{figure}
+
+The syntax of the Spade language was first of all changed to parse \verb+int+ types differently, the syntax \verb+int<L..H>+ allowing ranges to be specified. The old syntax \verb+int<W>+ was still supported but was syntactic-sugar for \verb!int<!$-(2^{w+1})$\verb!..!$(2^{w+1})-1$\verb!>! (the $+1$ part comes from all integers being signed in Spade) since this would give partial compatibility with older spade-program. In the previous work a lot more syntaxes were added but they were considered extraneous for updating the typeinference. This change makes it possible to propagate the range information from one function to another in the form of a range -- which is more precise than a wordlength which was what was available before. The Figure \ref{fig:BetterProgram} shows this new syntax in a small example spade-program. The extra variables \verb+a+, \verb+b+ and \verb+c+ are required to make the program compile, since the compiler has trouble inferring the variables between the expressions, this is a problem of the unification process and that there are insufficient requirements on some generics.
 
 The \verb+int+ type also had to change to work with 2 generic arguments -- a lower and a higher bound. These types had to be inserted in the typechecker. Making this change in full would require rewriting almost every single spade-compiler test, and would be a substantial amount of work and time, more time than this thesis has been allotted. The decisions to break with the best practices of software development was taken to make sure the thesis could be finished at all. Some of the tests were fixed where it was deemed simple to do so. Most of these changes were very mechanical though. The wordlength inference code also needed to be changed slightly to accept the new ranges as inputs from the typechecker.
 
@@ -299,6 +320,6 @@ The wordlength inference was also compared on 3 expressions: $a - a + a - a + a 
   \label{fig:CompareThings}
 \end{figure}
 
-
 The table in Figure \ref{fig:CompareThings} shows that ''AAIA'' always produced the tightest ranges. The last multiplication test on the third row also shows an example expression where ''IA'' produces a tighter range than ''AA''.
+
 

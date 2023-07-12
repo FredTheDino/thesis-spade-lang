@@ -181,17 +181,7 @@ The empty interval is also defined and written as $[]$. The empty interval usual
 
 \subsubsection{Interval Arithmetic: An example and Limitations}
 Examples are often helpful.
-We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$.
-
-\begin{verbatim}
-2 * [0, 1] + [1, 3] - [1, 3]
-// Scaling rule and subtraction is negated addition 
-[2 * 0, 2 * 1] + [1, 3] + (-1 * [1, 3])
-// Calculate
-[0, 2] + [1, 3] + [-3, -1]
-// Sum it upp
-[-2, 4]
-\end{verbatim}
+We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$. This mean we have $2 * [0, 1] + [1, 3] - [1, 3]$. Applying the scaling rule and subtraction is negated addition gives us $[2 * 0, 2 * 1] + [1, 3] + (-1 * [1, 3])$ -- we can now simplify to $[0, 2] + [1, 3] + [-3, -1]$ and sup it all up to $[-2, 4]$
 
 This gives us the conclusion that this expression will lie in the range $[-2, 4]$ for the given values of $x$ and $z$. This is true, but the estimate is larger than it necessarily needs to be. An observant reader would notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. This limitation leads us to affine arithmetic which understands the relations between variables we evaluate. Affine arithmetic can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ is the same thing.
 
@@ -239,15 +229,15 @@ entity main(clk: clock, rst: bool) -> int<4> {
 \begin{center}
 \begin{verbatim}
 error: Type error
-  ┌─ src/simple\_fault.spade:1:27
-  │
-1 │   fn f(a: int<3>) -> int<4> {
-  │                      ------ int<4> type specified here
-  │ ╭───────────────────────────^
-2 │ │   a + 1 + 1
-3 │ │ }
-  │ ╰─^ Found type int<5>
-  │
+  |- src/simple\_fault.spade:1:27
+  |
+1 |   fn f(a: int<3>) -> int<4> {
+  |                      ------ int<4> type specified here
+  | |---------------------------^
+2 | |   a + 1 + 1
+3 | | }
+  | |-^ Found type int<5>
+  |
   = Expected: 4
   =       in: int<4>
   =      Got: 5
@@ -275,7 +265,7 @@ entity main(clk: clock, rst: bool) -> int<4> {
 \end{verbatim}
 \end{center}
 \label{fig:SimpleCorrectSpade}
-\caption{``simple\_correct.spade`` A spade program that does compile, which is very similar to the program in Figure \ref{fig:SimpleFaultSpade}}
+\caption{``simple\_correct.spade`` A spade program that does compile}
 \end{figure}
 
 The Spade compiler implements a the Damas-Hindley–Milner typechecker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{fig:SimpleFaultSpade} and \ref{fig:SimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself. How this should be changed and to what is the central topic of this thesis.
