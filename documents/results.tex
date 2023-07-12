@@ -132,7 +132,7 @@ After doing a lot of thinking and reasoning we decided to see how a separate mod
 
 The idea for the implementation was to walk the entire AST after typechecking had run and monomorphisation was complete -- each entity was given to the wordlength-inference module called \verb+spade-wordlength-inference+. The algorithm from Figure \ref{fig:WLIAlgo} was then applied. Visit the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+, this is called an equation. Pick out all typevariables which are \verb+int<_>+ from the previous step, populating a mapping between type-variables and their wordlength. Then loop over all constraints from step 1 and try to evaluate the right-hand side. The evaluation method can be one of three modes: ''Old Mode'', ''Affine Arithmetic'' or ''Interval Arithmetic'', these options could also be enabled with the environment variable \verb+SPADE_INFER_METHOD+ to allow it to work with the swim buildsystem. If evaluation succeeded add the new variable to a new known set of variables and check there are no contradictions. Stop the loop if no more progress is made or we have looped as many times as there are equations. The result is then unified back into the AST for safekeeping. There are of course more details, and the Rust code for wordlenght inference is hopefully quite readable. If you are interested I would recommend reading the source code directly. 
 
-As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigReal+s.
+As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigRational+s. The decision of using \verb+BigRational+ was to avoid even more noise in the AA implementation.
 
 \begin{figure}
 \begin{verbatim}
@@ -277,39 +277,28 @@ SB_WARMBOOT: 0/1     (0.0%)
 The Figure \ref{fig:FIRoutput} shows the output from every PNR run for the FIR-filter program. All the outputs were identical regardless of what wordlength inference method was used. It is also worth noting that for ''IA'' and ''AAIA'' the return type of the \verb+fir+-function can be simplified to \verb+int<0..1000000>+. The return type is required to be \verb+int<-500000..1000000>+ for ''AA'' which goes into the negative even though it cannot possibly happen.
 
 \subsubsection{Comparing The Ranges For Simple Expressions}
-The wordlength inference was also compared on 3 expressions: $(a - a) + (a - a) + (a - a)$, $(a - b) \cdot (b - a)$ and $a \cdot a \cdot b \cdot b \cdot c \cdot c$, for all of the 3 methods ''AA'', ''IA'' and ''AAIA''. All arguments had a wordlength of $5$ and the range of the resulting expression was noted in the table in Figure \ref{fig:CompareThings}.
+The wordlength inference was also compared on 3 expressions: $a - a + a - a + a - a$, $(a - b) \cdot (b - a)$ and $a \cdot a \cdot b \cdot b \cdot c \cdot c$, for all of the 3 methods ''AA'', ''IA'' and ''AAIA''. All arguments had a wordlength of $5$ and of the range $0..100$ the resulting range was noted in the table in Figure \ref{fig:CompareThings}.
 
 \begin{figure}
   \centering
   \begin{tabular}{l | c c c}
                                     & IA     & AA     & AAIA    \\
+                                    & \multicolumn{3}{c}{Wordlength $= 5$} \\
     \hline
-    $(a - a) + (a - a) + (a - a)$   & $-93..93$ & $0..0$          & $0..0$       \\
+    $a - a + a - a + a - a$   & $-93..93$ & $0..0$          & $0..0$       \\
     $(a - b) \cdot (b - a)$             & $-961..961$ & $0..0$           & $0..0$       \\
-    $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $-15728640..16777216$      & $-16794692..16794693$      & $-15728640..16777216$
+    $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $-15728640..16777216$      & $-16794692..16794693$      & $-15728640..16777216$ \\[0.7em]
+                                    & \multicolumn{3}{c}{Range $= 0..100$} \\
+    \hline
+    $a - a + a - a + a - a$   & $-300..300$ & $0..0$          & $0..0$       \\
+    $(a - b) \cdot (b - a)$             & $-10000..10000$ & $0..0$           & $0..0$       \\
+    $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $0..10^{12}$      & $-9.6875^{12}..10^{12}$      & $0..10^{12}$
   \end{tabular}
 
-  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the word length of 5}
+  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the word length of 5 or are in the range 0 to 100.}
   \label{fig:CompareThings}
 \end{figure}
 
 
 The table in Figure \ref{fig:CompareThings} shows that ''AAIA'' always produced the tightest ranges. The last multiplication test on the third row also shows an example expression where ''IA'' produces a tighter range than ''AA''.
-
-The same experiment as outlined in the previous paragraph was also run when all variables had a range of $0..100$ instead of an exact wordlength. The results were noted in the table in Figure \ref{fig:CompareThingsPositive}
-\begin{figure}
-  \centering
-  \begin{tabular}{l | c c c}
-                                    & IA     & AA     & AAIA    \\
-    \hline
-    $(a - a) + (a - a) + (a - a)$   & $-300..300$ & $0..0$          & $0..0$       \\
-    $(a - b) \cdot (b - a)$             & $-10000..10000$ & $0..0$           & $0..0$       \\
-    $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $0..10^{12}$      & $-9.6875^{12}..10^{12}$      & $0..10^{12}$
-  \end{tabular}
-
-  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the range 0..100}
-  \label{fig:CompareThingsPositive}
-\end{figure}
-
-In the table in Figure \ref{fig:CompareThings2} ''AAIA'' always produced the tightest ranges. The multiplication test on the third row shows an example expression where ''IA'' produces a tighter range than ''AA''.
 
