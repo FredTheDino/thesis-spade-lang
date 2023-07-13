@@ -57,7 +57,7 @@ Almost out of desperation for getting something to work. Just to make sure this 
 This implementation sent extra information about the largest number possible to come from the computations with all expressions -- similar to the third implementation in Section \ref{sec:Third} but just better written. \verb+ConstraintExpr+ was also extended with the variant \verb+LargestNumber+ which gives out the largest number representable by the wordlength given in -- the opposite of \verb+BitsToRepresent+ and similar to the extra variant made in the second implementation in Section \ref{sec:Second}. The constraints in the typechecking of binary expressions were changed to either take the largest number from the sub-expression or just the largest number from the wordlength this snippet is presented in Figure \ref{fig:BinaryExpression}. The code creates variables from sub-expressions and creates a hidden type-variable \verb+result_max+, then constraints link these different variables together -- all the constraints are equality (\verb+=+) constraints.
 
 \begin{figure}
-\begin{verbatim}
+\begin{minted}[linenos]{rust}
 // Let the typechecker infer the maximum ints 
 let lhs_max = self.visit_expression(&lhs, ctx, generic_list)?;
 let rhs_max = self.visit_expression(&rhs, ctx, generic_list)?;
@@ -113,7 +113,7 @@ match *op {
    }
    ...
 }
-\end{verbatim}
+\end{minted}
 \caption{The code adding the constraints for addition in the Spade-compiler}
 \label{fig:BinaryExpression}
 \end{figure}
@@ -135,8 +135,8 @@ The idea for the implementation was to walk the entire AST after typechecking ha
 As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigRational+s. The decision of using \verb+BigRational+ was to avoid even more noise in the AA implementation.
 
 \begin{figure}
-\begin{verbatim}
-if InferMethod == OLD then return
+\begin{minted}[linenos]{python}
+if InferMethod == OLD: return
 
 (Variables, Equations) = extract_variables_and_equations(AST, TypeChecker)
 Known = extract_known_types(Variables, AST)
@@ -147,7 +147,7 @@ for _ in Equations:
     MaybeValue = case InferMethod of
                   IA -> evaluate_using_ia(Known, Body)
                   AA -> evaluate_using_aa(Known, Body)
-    case MaybeValue of
+    match MaybeValue:
       Just Value -> inject_and_check_for_contradictions(Value, Known)
       Nothing -> pass
   if KnownAtStart == Known:
@@ -155,7 +155,7 @@ for _ in Equations:
 
 for Var in Variables:
   unify(TypeChecker, Var, Known[Var])
-\end{verbatim}
+\end{minted}
 \caption{The algorithm used in the seventh attempt to determine the wordlength for all expressions in a spade-program.}
 \label{fig:WLIAlgo}
 \end{figure}
@@ -184,7 +184,7 @@ The Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in varianc
 These changes did shown promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} was typechecked a lot better by the spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_six_times+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- compared to the ''Old'' approach which returns an integer with 11 bits. % The number of cases where a frivolous truncation was needed has decreased due to these changes. This can lead to clearer and more concise code.
 
 \begin{figure}
-\begin{verbatim}
+\begin{minted}[linenos]{rust}
 // Old spade wordlength inference
 fn add_and_subtract(x: int<5>) -> int<11> {
   (x - x) + (x - x) + (x - x)
@@ -199,7 +199,7 @@ fn add_and_subtract(x: int<5>) -> int<0> {
 fn add_and_subtract(x: int<5>) -> int<8> {
   (x - x) + (x - x) + (x - x)
 }
-\end{verbatim}
+\end{minted}
   \caption{A simple spade function showing the difference in the wordlength inference with the new approaches with a focus on addition and subtraction.}
   \label{fig:CodeThatWorksNow}
 \end{figure}
@@ -213,7 +213,7 @@ After the raging success of the implementation in Section \ref{sec:Seven} it was
 There was an earlier attempt similar work previously -- the work had been abandoned since the changes in the typechecker and other compilation steps are non-trivial. The previous work is available in a closed merge request from the official Spade repository \url{https://gitlab.com/spade-lang/spade/-/merge_requests/23}. A problem that was outlined in the merge request was that no changes were made in the typechecker and that the changes were purely syntactical -- which caused some implementation details to be harder. Since there now is a working implementation outlined in Section \ref{sec:Seven} of a range based system the constraints in the typeinference-stage need not be updated. Basing the range based syntax on the newly implemented wordlength inference simplifies a lot of details.
 
 \begin{figure}
-  \begin{verbatim}
+  \begin{minted}[linenos]{rust}
 fn twice<#A, #B, #M, #N>(x: int<A..B>) -> int<M..N> {
   2 * x
 }
@@ -228,7 +228,7 @@ entity main(clk: clock, rst: bool) -> int<14..14> {
   let c: int<14..14> = twice(b);
   c
 }
-  \end{verbatim}
+  \end{minted}
   \caption{A small spade program that shows the new range syntax in context and gives an example of how integer range information is now more detailed.}
   \label{fig:BetterProgram}
 \end{figure}
@@ -252,14 +252,14 @@ The small library \verb+spade-memory-display+ was used for evaluation. The chang
  
 \begin{figure}
 \begin{center}
-\begin{verbatim}
+\begin{minted}[]{text}
 ICESTORM_LC: 190/1280 (14.8%)
 ICESTORM_PLL: 0/1      (0.0%)
 ICESTORM_RAM: 0/16     (0.0%)
 SB_GB: 2/8            (25.0%)
 SB_IO: 4/112           (3.6%)
 SB_WARMBOOT: 0/1       (0.0%)
-\end{verbatim}
+\end{minted}
 \end{center}
 
   \caption{The output from every place and route run given regardless of wordlength inference method for the spade-library spade-memory-display.}
@@ -268,12 +268,12 @@ SB_WARMBOOT: 0/1       (0.0%)
 
 All builds produced the same metrics and is presented in Figure \ref{fig:SMDoutput}. The metrics shows no difference for any of the 153 place and route compilation of the spade-library. All of the compilations used 190 LUTs. 
 
-\subsubsection{A simple FIR-filter}
-FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' with \verb+swim clean+ ran between each build. The FIR-filter program in its entirety is available in Section \ref{source:FIR}.
+\subsubsection{A Simple FIR-filter}
+FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' with \verb+swim clean+ ran between each build. The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}.
 
 \begin{figure}
 \begin{center}
-\begin{verbatim}
+\begin{minted}[]{text}
 ICESTORM_DSP: 0/8    (0.0%)
 ICESTORM_HFOSC: 0/1  (0.0%)
 ICESTORM_LC: 2/5280  (0.0%)
@@ -289,7 +289,7 @@ SB_LEDDA_IP: 0/1     (0.0%)
 SB_RGBA_DRV: 0/1     (0.0%)
 SB_SPI: 0/2          (0.0%)
 SB_WARMBOOT: 0/1     (0.0%)
-\end{verbatim}
+\end{minted}
 \end{center}
 
   \caption{The output from every place and route run given regardless of wordlength inference method for the simple FIR-filter.}

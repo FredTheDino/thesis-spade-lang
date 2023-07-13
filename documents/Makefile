@@ -5,7 +5,7 @@ all: affine-and-interval-arithmatic.pdf thesis.pdf
 %.pdf: %.md
 	pandoc -fmarkdown $< -tpdf -o $@
 
-%.pdf: %.tex %.bib abstract.tex appendix_version_and_hashes.tex background.tex conclusion.tex diff.tex discussion.tex introduction.tex method.tex old-thesis.tex results.tex
+%.pdf: %.tex %.bib abstract.tex appendix_version_and_hashes.tex background.tex conclusion.tex discussion.tex introduction.tex method.tex old-thesis.tex results.tex
 	tectonic --keep-intermediates -Z shell-escape --outfmt pdf $<
 
 
