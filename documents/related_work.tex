@@ -1,43 +1,6 @@
 \chapter{Related Work}
-Wordlength inference is a topic that is studied quite a bit but few methods focus of the interplay between compilers and wordlength inference. The wordlength inference proposed in this thesis is also a lot more focused on correctness rather than optimizing the resource usage, and thus the focus is quite different. The study of these kinds of inference methods related to FPGA compiler design is however a topic that is much less studied.
+Wordlength inference is a studied topic. But the focus is often on fractional bits like the method \citeauthor{src:MinOfFrac} suggests in \cite{src:MinOfFrac} where they try to remove bits from places where they have little value -- this is seperate from the goal of this work where correctness is of uttermost importance. There is also work \cite{src:HLSandOpt} by \citeauthor{src:HLSandOpt} which tries to apply C/C++ compiler optimizations for general purpose CPUs to HDL versions of C/C++ -- the paper contains a lot of good discussions about FPGA hardware but the findings could do with a large sample size of programs -- a similar work is done by \citeauthor{src:ConFPGA}. But work on actually inferring the wordlength of expressions is more akin to typeinferrence which is well studied \cite{src:DamasHindleyMilner}\cite{src:TypeCheckersBook}\cite{src:BiTy}. Tough the logic system underlying the most practical parts of wordlength inference might be solvable by a very simple constraint satisfaction algorithm.
 
-\section{Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis}
-Minimization of Fractional Wordlength on Fixed-Point Conversion for High-Level Synthesis suggests a method for using as few bits in the fractional part of values as possible. Their approach resulted in decent optimizations and was much faster than doing the optimization by hand. The sample size of the programs is quite small and did not always show as promising results. \cite{src:MinOfFrac}
+There is also some value to be found in the method of software development in this work which is inspired by the Agile development methodology \cite{src:Agile}. But making the developer tooling better is something that also aids in producing better software faster -- that is something we believe is non-controversial and that \cite{src:Agile} agrees with.
 
-\section{High-level synthesis and arithmetic optimizations}
-The thesis ``High-level synthesis and arithmetic optimizations`` is an attempt to merge the fields of arithmetic with and HDL-compilers. Several approaches are evaluated that affect correctness, throughput and latency. It describes fixed-point and floating point arithmetic, FPGA hardware and FPGA optimizations in a very clear way.
-
-Problems with the IEEE floating point numbers are mentioned, for one how the implicit rounding causes addition to be non-associative, and how C/C++ compilers used for HDL use CPU optimizations which are not always suitable for FPGA.
-
-\citeauthor{src:HLSandOpt} is an alternative approach to Spade when it comes to generating hardware and it tries to generate better FPGA hardware by modifying a compilation layer for the current compilers. But C/C++ has a fundamental problem when being mapped to hardware, the languages were built for single-threaded sequential computations where FPGAs prefer to do computations in parallel. \cite{src:HLSandOpt}
-
-\section{Agile Software Development Methods: Review and Analysis}
-\citeauthor{src:Agile} gives a comprehensive academic analysis of what agile software development is. The definition is vague but focuses on the slower iteration times. This kind of methodology works better if tools are improved which multiple of the methodologies suggest are important. \cite{src:Agile}
-
-Agile methodologies allow a more flexible workflow with a focus on being lean -- this idea is useful even when doing experimental implementations.
-
-\section{Evaluation of the streams-C C-to-FPGA compiler: an applications perspective}
-\citeauthor{src:ConFPGA} discuss compiler optimizations that can be done on Streams-C. Streams-C is a subset of the C-programming language that can be used on FPGAs. The study shows that some simple optimizations can rival hand optimized VHDL. The study implements a simple poly-phase filter and uses that for comparisons. \cite{src:ConFPGA}
-
-The number of experiments is perhaps a bit small -- a singular experiment might have been cherry-picked. The results however are promising and a similar approach is used in this thesis -- though this thesis is not as focused on optimizations.
-
-% # Planned literature supporting the thesis
-% - Books and papers on IA and AA
-%   - Self-Validated Numerical Methods and Applications
-% - Static analysis books and literature, potentially digging into bounded model checking (BMC) and the likes
-%   - Calculus of Computation, maybe more literature here
-% - The course on program analysis available on LiU 
-%   - TDDE34 and the presentations there
-% - Previous literature on Spade
-%   - Spade: An HDL Inspired by Modern Software Languages and co
-% - Books and papers on type checkers and compilers books and literature
-%   - Some papers on Henk are interesting
-%   - Complete and Easy Bidirectional Typechecking for Higher-Rank Polymorphism
-%   - Types and Programming Languages by Ben Pierce
-% - There is a lot of FPGA literature on FPGA optimization, here are a few
-%    - Constantinides, George A.
-%      Word-length Optimization for Differentiable Nonlinear Systems
-%    - N. Doi and T. Horiyama and M. Nakanishi and S. Kimura
-%      Minimization of fractional wordlength on fixed-point conversion for high-level synthesis
-%    - Have like 10 more of these...
-
+This work stands firmly in the space between typechecking, optimization, HDLs and methods for software development -- a very weird space indeed.
