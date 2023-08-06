@@ -276,3 +276,5 @@ TSWLatexianTemp*
 *.lpz
 
 *.pdf
+
+_old_version/
