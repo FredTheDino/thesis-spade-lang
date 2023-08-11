@@ -1,164 +1,263 @@
-\chapter{Results}
+\chapter{The Development Process}
 \label{cha:Results}
 The problem of doing wordlength inference is a complex problem. This section contains a series of different implementations that failed in various ways, only the last one implementation ''worked'' and is described in Section \ref{sec:Seven}.
 
 Each section describes the thought process, implementation details of most important, new insights gained from this work and an evaluation of the final state of the implementation for each attempted solution. Explicit commit hashes are given to make it very clear what version is discussed.
 
-Starting the implementation work we knew parts of what we wanted to achieve. We wanted a more sophisticated version of wordlength inference that handled mathematical expressions with less error. The first step was understanding what was currently happening with the wordlength inference and where the problems where placed. The goal of this implementation was to find out just how much we did not know about the problem of a more sophisticated wordlength inferrer.
+\section{Inital Requirements}
+\label{sec:initalReq}
+Starting the implementation work we knew parts of what we wanted to achieve. We wanted a more sophisticated version of wordlength inference that handled mathematical expressions and required less manual intervention for wordlengths when writing Spade programs. The first step was understanding what was currently happening with the wordlength inference and where the problems where located. The goal of this implementation was to find out just how much we did not know about the problem of a more sophisticated wordlength inferrer.
 
-At the start, the dream was to implement this wordlength inference into the type inference directly. It was questionable somewhat possible since Damas-Hindley-Milner type checkers have been implemented with sub-typing that could be mapped onto this problem -- one such mapping is Elm with type inference and extensible records.
+\begin{figure}
+\begin{enumerate}
+    \item Require fewer explicit \verb|sext|, \verb|zext| and \verb|trunc| specified by the programmer
+    \item Make it easy to support unsigned integers -- which is something the Spade compiler is hoping to add soon
+    \item Be as compatible with the current mainline Spade-compiler and easily switch between different versions of wordlength inference methods such as the old and any potential improvements using AA or IA
+    \item Allow for as much flexibility in language design as possible
+    \item Reduce resource usage of the finished Spade program
+    \item Integrate directly into the typechecker
+\end{enumerate}
+  \caption{A list of design requirements for improved wordlength inference}
+  \label{figReq}
+\end{figure}
 
-In the discussions, some of the less interesting implementation details are deliberately left out. The withheld details aim to make the text clearer and focused.
+The initial idea for requirements are listed in Figure \ref{figReq}. These requirements are prioritized so that requirement 1 is the most important and requirement 6 is the least important. The final implementation met all of the requirements except for 6 -- since the wordlength inference was implemented in a module that operates on a typechecked syntax tree.
 
-\section{Context and the Goal of These Experiments}
-Most of these implementations were experiments and were not thought to be the solutions most likely to work. The more encompassing and maybe easier solutions have always been adding a separate module for wordlength inference -- in a similar way to how the linear types are checked in Spade at the moment -- or adding a whole new type inference and type checker.
+Replacing the type inference in the current compiler with something more powerful could potentially be the best solution. The current type inference was regarded by some contributors as magic and was hard to work with and reason about -- in some sense the module was questionable technical-debt. This poses a lot of language design questions, questions this thesis hoped to avoid since it might cause features to not be merged and made useful in the mainline compiler. Considering for example that a more powerful type inference might not be desirable in the language, since with power comes complexity and more powerful typechecking-systems like Haskell, PureScript or Coq (one need only take a walk on the lambda cube from Section \ref{sec:lambdaCube}. The more complex typesystems are know to make the problem of error messages harder -- the antithesis of Spades goal of friendly error messages -- but these more sophisticated typesystems offer great benefits to those who can wield them. To add more complexity and power to the typesystem is not a change to be made eagerly.
 
-The separate wordlength inference module was however not a completely sound solution. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the type inference the modules need some kind of communication and this communication is obviously easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the type inference currently throws away. These kinds of errors with the interaction between the type inference were suspected to be difficult to fix, so a few minor experiments were made into potential easier solutions.
+A separate wordlength inference module is not a completely obvious solution. Splitting the wordlength inference from the typecheckeer has both pros and cons, since the information from the wordlength inference has to end up in the inferred types from the type inference the modules need some kind of communication and this communication is obviously easier if the modules are the same module. However the wordlength inference requires information about the expressions and variables used in them, which the type inference currently throws away. Wordlength inference might also be helpful for the compile-time integers that exist in Spade -- splitting the wordlength inference to a different module reduces the coherence. A few developmental excursions were made into potential easier solutions.
 
-Replacing the type inference in the current compiler with something more powerful could potentially be the best solution. The current type inference was regarded by some contributors as magic and was hard to work with and reason about -- in some sense the module was questionable technical-debt. This poses a lot of language design questions, questions this thesis hoped to avoid since it might cause features to not be merged and made useful in the mainline compiler. Considering for example that a more powerful type inference might not be desirable in the language. Since most of the more powerful typechecking-systems are know to have horrid error messages -- the antithesis of Spades goal of friendly error messages -- the change should not be made to quickly out of respect for the project. It would also be a very large undertaking to retrofit the entire compiler to work with this new type inference and be more work than is available in this thesis and was always questionable out of scope. 
+\section{Taxonomy of the Solutions and a Brief Overview}
+
+\begin{figure}
+\begin{tikzpicture}[
+  sibling distance=5em,
+  level distance=4em,
+  every node/.style = {shape=rectangle, rounded corners, draw, align=center}
+]
+  \node[xshift=-1cm] {Integrate Into Typechecker}
+          child[xshift=-1.3em, yshift=0.5em] {node {Modify\\Constraints}
+            child {node {1\\S.\ref{sec:First}}}
+            child {node {2\\S.\ref{sec:Second}}}
+          }
+          child[xshift=-0.5em] {node {New\\Constraints}
+            child {node {3\\S.\ref{sec:Third}}}
+          }
+          child[xshift=0.5em] {node {Adding\\Missing\\Information}
+            child {node {4\\S.\ref{sec:Forth}}}
+          }
+          child[xshift=1.3em, yshift=0.5em] {node {Verifying\\Hypothisis}
+            child {node {5\\S.\ref{sec:Other}}}
+            child {node{6\\S.\ref{sec:Other}}}
+          } ;
+  \node[xshift=6cm] {Seperate\\Module}
+          child {node {A Simple MVP}
+            child {node {7\\S.\ref{sec:Seven}}
+              child {node {Syntax}
+                child {node {7+\\S.\ref{sec:Seven2}}}
+              }
+            }
+          };
+\end{tikzpicture}
+  \caption{A overview of the different solutions and how their ideas relate to eachother -- the ideas are numbered and the relevant section for each chapter is mentioned.}
+  \label{fig:taxonomy}
+\end{figure}
+
+There were a lot of implementations that were tested and iterated upon as can be seen in Figure \ref{fig:taxonomy}. The majority of attempts hoped to modify the existing typechecker into doing the wordlength inference better -- but these changes interfered with a lot of other language features like type level integer constants which are required memories. After numerous attempts it was decided to try something new from a different perspective. A seperate module for wordlength inference worked wonders and was simpler to implement, the changes are discussed further in Section \ref{sec:Seven}.
+
+
+Most of the implementations from Figure \ref{fig:taxonomy} were experiments and were not thought to be the solutions most likely to work. The more encompassing and maybe easier solutions have always been adding a separate module for wordlength inference -- in a similar way to how the linear types are checked in Spade at the moment -- or adding a whole new type inference and type checker.
+
 
 \section{The First Implementation -- Naive}
 \label{sec:First}
-The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.
 
-After throwing a quick glance at the code it became clear that at least lower and upper bounds -- though these changes would not solve the larger problem of inferring the wordlength using Affine Arithmetic only allowing usage of Interval Arithmetic, but adding Affine Arithmetic in the type inference required a kind of replacement that was unclear how to add at the time. It was also questionable reasonable to only support wordlengths that fit in 64 bits -- since the current FPGA design does not handle that kind of data.
+It was not immediately obvious how affine arithmetic would fit into the current typesystem in Spade. What did seem like a good idea at the time was adding ranges into the integers in the typesystem. So the initial naive implementation used the \verb+ConstraintExpr+ that existed for compile time integers and tried to force it into doing better wordlength inference. \verb+ConstraintExpr+ was the basis for the current wordlength inference which simply added one to each number and was therefore what immediately sprang to mind. 
+\cprotect\footnote{The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.}
 
-After poking some more two different ways of expressing constraints and requirement were found \verb+ConstraintExpr+ and \verb+Requirement+. These very similarly named concepts are very similar. \verb+ConstraintExpr+ is used primarily for compile-time integers and has support for addition, negation, constants and logarithms. \verb+Requirement+ adds information that does not fit neatly into a Damas-Hindley-Milner typesystem, namely: fields a type is expected to have, methods a type is expected to have and if a type can hold a given integer literal. Both \verb+Requirement+s and \verb+ConstraintExpr+s are removed after they are satisfied for a type.
+% After poking some more two different ways of expressing constraints and requirement were found \verb+ConstraintExpr+ and \verb+Requirement+. These very similarly named concepts are very similar. \verb+ConstraintExpr+ is used primarily for compile-time integers and has support for addition, negation, constants and logarithms. \verb+Requirement+ adds information that does not fit neatly into a Damas-Hindley-Milner typesystem, namely: fields a type is expected to have, methods a type is expected to have and if a type can hold a given integer literal. Both \verb+Requirement+s and \verb+ConstraintExpr+s are removed after they are satisfied for a type.
 
-The type checking of binary expressions simply added $1$ to the wordlength for sum-expressions, and summed up the wordlengths for multiplication-expressions. The naive worstcase approach was changed to work using Interval Arithmetic. 
+\verb+ConstraintExpr+s was hijacked it into supporting ranges, to see where the compiler started to complain and find other potential pot holes or errors. \verb+ConstraintExpr+ was changed to support addition, negation, and multiplication and operate on ranges with a a high and a low value -- in contrast to how \verb+ConstraintExpr+ worked only a single value prior. The typechecking of binary expressions was also changed to add these new kinds of constraints and checks.
 
-\verb+ConstraintExpr+s looked to be the best suited current construction in the compiler so we decided to hijack it into supporting ranges, to see where the compiler started complaining. \verb+ConstraintExpr+ was changed to support addition, negation, and multiplication while working on a high and a low value not only a single value. The typechecking of binary expressions was also changed to add different constraints.
+This change broke a lot of things in the compiler in interesting ways. Array lengths no longer worked since they also used these kinds of \verb+ConstraintExpr+. The types of some expressions also failed to infer which caused the \verb+HIR-lowering+ to fail. The reason for the missing types was because there are choices to be made when typechecking some expressions, what wordlength should actually be used when there are multiple candidates. There was also an attempt at mitigating the missing types by introducing an extra solver stage for the \verb+ConstraintExpr+s -- this stage ran after a function was typechecked and tried to pick the smallest size of all constraints and did not work.
 
-This change broke a lot of things in the compiler in interesting ways. Array lengths no longer worked since they also used these kinds of \verb+ConstraintExpr+ -- which is very interesting to note. The types of some expressions also failed to infer which complicated the \verb+HIR-lowering+. The reason for the missing types is because there are choices to be made when typechecking some expressions, what wordlength should actually be used when there are multiple candidates. There was also an attempt at mitigating the missing types by introducing an extra solver stage for the \verb+ConstraintExpr+s -- this stage ran after a function was typechecked and tried to pick the smallest size of all constraints. This change was also too large to allow as much inter-op as possible with the mainline spade-compiler.
+The change was also too large to allow as much compatibility as possible with the mainline compiler, broke language features and added more complexity to the constraint system. These changes signaled that changing the \verb+ConstraintExpr+ to operate on ranges would be too much to ask if one wanted any kind of backwards compatibility. The problem of failing to infer the wordlengths for some integers was also noted here, and that it usually was the symptom of not giving the typesystem enough information to deduce all wordlengths -- the seperate solver did not help it either.
+
+How affine arithmetic could be added into this kind of code was still to be decided, since the typechecker is a logical system it has to run backwards which is something affine arithmetic cannot do.
 
 The implementation outlined here did not work -- it was also never expected to work. It gave very clear hints as to where to dig deeper, where the understanding was sub par and some of the hidden requirements for adding wordlength inference.
 
 \section{The Second Implementation -- Another Naive Stab}
 \label{sec:Second}
-The second attempt was also very early in the process. Changes are available on the git-branch \verb+the-second-simplest-thing+ and has git-hash \verb+3d92c0e4b28b64104f700c3d299f62e7938cb016+.
 
-Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which is the opposite of the \verb+BitsToRepresent+ expression which handles logarithms. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths at least somewhat freely. This idea and implementation -- was like the implementation in Section \ref{sec:First} -- not supposed to solve the entire problem and is not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference.
+Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support a \verb+BitsToRange+ -- which worked as the opposite of the \verb+BitsToRepresent+ expression. \verb+BitsToRange(X)+ turned a wordlength into the maximum positive value representable for a signed integer with \verb+X+ bits. The idea was to allow moving between wordlength and a max-value in the type-level expressions. This would hopefully leave the array code working, while allowing the expression code to infer wordlengths since this would be more information. An attempt at fixing the problems outlined in the first solution. This idea and implementation was not supposed to solve the entire problem completely. The second attempt was not a fit solution for the entire problem since it only solves the sub-problem of very naive interval based wordlength inference -- affine arithmetic was nowhere to be seen as mentioned. The ambition was to solve the easiest parts of the problem first since if the idea cannot handle the easy parts it is not worth thinking about the hard parts.
+\cprotect\footnote{Changes are available on the git-branch \verb+the-second-simplest-thing+ and has git-hash \verb+3d92c0e4b28b64104f700c3d299f62e7938cb016+.}
 
-When reviewing the code for this report an error in the original code was also found -- the function \verb+check_expr_for_replacement+ should refer to \verb+BitsToRange+ on line $1036$ -- the changes presented in this section never compiled.
+\begin{figure}
+\begin{minted}[linenos]{python}
+def CheckAddition():
+  Constraint(Result = R(M(Lhs) + M(Rhs))
+  Constraint(Lhs = R(M(Result) - M(Rhs))
+  Constraint(Rhs = R(M(Result) - M(Lhs))
 
-These new constraints did not suffice, since all of the constraints were equality (\verb+=+) constraints and for this idea to work less-than-or-equal constrains were required (\verb+<=+). Less-than-or-equal constraints might be required for wordlength inference, and it might be why it is fairly hard and unstable to insert these constraints into the current constraint/requirement systems. The problem of adding Affine Arithmetic is still unsolved and would not be resolved using a solution of this form so we need to represent the operations and their values in full. We want to encode the operations and additions into a structure. We also need to carry the information for the intervals of variables somewhere else, since the current typesystem really disagrees with encoding ranges into int-types -- a new construction is required. 
+def CheckIf():
+  Unify(True, False)
+  
+\end{minted}
+  \cprotect\caption{Psuedo code for the wordlengths of the 3 unknowns in an addition (the result, the left hand size (LHS) and the right hand side (RHS). Another function is sketched for checking of If-Expressions where \verb+True+ and \verb+False+ are the types of the results of the respective branches. \verb+ToRepresent+ is the same as \verb+BitsToRepresent+ and \verb+M+ is the same as \verb+BitsToRange+ -- the names were changed to make it easier to read at a glance. \verb+Constraint+ signals a new constraint that should be added.}
+\label{fig:SecondAlgo}
+\end{figure}
+
+The Figure \ref{fig:SecondAlgo} contains pseudo code for the changes introduced in this second idea. It adds 3 constraints for an addition and 1 unification for an If-Expression. Now let us ponder the case where we have the following if-expression \verb!if ... { a } else { a + 4 }! in a context where \verb+a+ is an integer of wordlength 1 (\verb+a: int<1>+). We unify both If-branches, which causes \verb+a+ to be part of the result and the \verb+Lhs+. We can infer \verb+Lhs=1+ and \verb+Result=1+, which changes the first constraints to \verb+1 = R(M(1) + 4)+. This constraint gives a contradiction which shows how inflexible this solution is. Ideally this piece of code would compile fine -- since we can easily fir $a + 4$ into the same wordlength as $a$. But to get this to typecheck we require a \verb+sext+, which highly contest out first requirement.
+
+The constraints listed in \ref{fig:SecondAlgo} are all equality-constraints (\verb+=+) and for this idea to work less-than-or-equal constrains (\verb+<=+) would be more suitable. Less-than-or-equal constraints might be required for wordlength inference, but these cannot be expressed in the Spade typsystem as is. The problem of adding affine arithmetic is still unsolved. We want to encode the operations and additions into a structure to support affine arithmetic -- which would then require a new system to work in parallel to . We also need to carry the information for the intervals of variables somewhere else, since the current typesystem really disagrees with encoding ranges into int-types -- a new construction is required. 
 
 \section{The Third Implementation -- Considering Equations}
 \label{sec:Third}
 The third attempt focused on adding equations and added a separate constraint language. These constraints are part of the type inference.
+\cprotect\footnote{Changes are available on the branch \verb+the-third-simplest-with-equations+ with the git-hash \verb+ 83d1da48f5010767b9a96aea0a5bca13b7415084+.}
 
-A new set of constraints was added giving \verb+ConstraintExpr+ and \verb+Requirement+ a new friend called \verb+SizeExpression+. Aside from the obvious technical-debt added with a whopping 3 different kinds of constraints that express almost the same thing -- the solution was deemed too ''ugly''. The constraints needed for \verb+SizeExpression+ were required to be feed forward by the type inference -- following a completely different approach to the other requirements which were implicitly added to lists. This caused a large amount of changes in the type inference which was preferably to be avoided.
+A new set of constraints was added giving \verb+ConstraintExpr+ and \verb+Requirement+ a new friend called \verb+SizeExpression+. Aside from the obvious technical-debt with 3 different kinds of constraints that express similar ideas -- the solution was deemed too ''ugly''. The constraints needed for \verb+SizeExpression+ were required to be feed forward by the type inference -- following a completely different approach to the other requirements which were added to lists. This caused a large amount of changes in the type inference which was preferably to be avoided.
 
-We also start to suspect that the wordlength inference might \textit{need} to be a separate module, split up from the type inference and run after all the types have been inferred. This code did however not live long, and might even be questionable mere curiosities.
+We also start to suspect that the wordlength inference might \textit{need} to be a separate module, split up from the type inference and run after all the types have been inferred. This idea did however not live long, and might even be a mere curiosities.
 
 \section{The Fourth Implementation -- A Desperate Attempt}
-Almost out of desperation for getting something to work. Just to make sure this whole ordeal wasn't impossible -- these changes were made. These changes are also the most insightful in all of these experiments. The changes are available on the git-branch \verb+the-fourth-attempt-now-with-equivelence+ and has git-hash \verb+ba0fa1baab56a725c31f703204da3b7d5f44380a+.
+\label{sec:Forth}
 
-This implementation sent extra information about the largest number possible to come from the computations with all expressions -- similar to the third implementation in Section \ref{sec:Third} but just better written. \verb+ConstraintExpr+ was also extended with the variant \verb+LargestNumber+ which gives out the largest number representable by the wordlength given in -- the opposite of \verb+BitsToRepresent+ and similar to the extra variant made in the second implementation in Section \ref{sec:Second}. The constraints in the typechecking of binary expressions were changed to either take the largest number from the sub-expression or just the largest number from the wordlength this snippet is presented in Figure \ref{fig:BinaryExpression}. The code creates variables from sub-expressions and creates a hidden type-variable \verb+result_max+, then constraints link these different variables together -- all the constraints are equality (\verb+=+) constraints.
+Almost out of desperation for getting something to work. Just to make sure this whole ordeal wasn't impossible -- these changes were made. These changes are also the most insightful in all of these experiments.
+\cprotect\footnote{The changes are available on the git-branch \verb+the-fourth-attempt-now-with-equivelence+ and has git-hash \verb+ba0fa1baab56a725c31f703204da3b7d5f44380a+.}
 
 \begin{figure}
-\begin{minted}[linenos]{rust}
-// Let the type checker infer the maximum ints 
-let lhs_max = self.visit_expression(&lhs, ctx, generic_list)?;
-let rhs_max = self.visit_expression(&rhs, ctx, generic_list)?;
-match *op {
-   BinaryOperator::Add => {
-       // Create new typevariables
-       let (lhs_t, lhs_size) = self.new_split_generic_int(&ctx.symtab);
-       let (rhs_t, rhs_size) = self.new_split_generic_int(&ctx.symtab);
-       let (result_t, result_size) = self.new_split_generic_int(&ctx.symtab);
+\begin{minted}[linenos]{python}
+CheckAddition():
+   # Take our best guess of a max value
+   LhsMax = PassedLhsMax or Largest(LhsSize)
+   RhsMax = PassedRhsMax or Largest(RhsSize)
 
-       // Create a helper type variable that adds indirection for the unification later
-       let result_max = self.new_generic();
-
-       // Take our best guess of a max value
-       let lhs_max = match lhs_max {
-           Some(max) => ce_var(&max),
-           None => ce_largest(ce_var(&lhs_size)),
-       };
-       let rhs_max = match rhs_max {
-           Some(max) => ce_var(&max),
-           None => ce_largest(ce_var(&rhs_size)),
-       };
-
-      // We know the maximum values add to give a new maximum
-      self.add_constraint(
-          result_max.clone(),
-          lhs_max.clone() + rhs_max.clone(),
-          expression.loc(),
-      );
-      // The maximums implies a size for each of the values
-      self.add_constraint(
-          result_size.clone(),
-          bits_to_store(ce_var(&result_max)),
-          expression.loc(),
-      );
-      self.add_constraint(
-          lhs_size.clone(),
-          bits_to_store(lhs_max.clone()),
-          lhs.loc(),
-      );
-      self.add_constraint(
-          rhs_size.clone(),
-          bits_to_store(rhs_max.clone()),
-          rhs.loc(),
-      );
-      // Link the type variables to the AST
-      self.unify_expression_generic_error(expression, &result_t, &ctx.symtab)?;
-      self.unify_expression_generic_error(&lhs, &lhs_t, &ctx.symtab)?;
-      self.unify_expression_generic_error(&rhs, &rhs_t, &ctx.symtab)?;
-
-      // Return our best guess to make the expressions around aware of us
-      Ok(Some(result_max))
-   }
-   ...
-}
+  # We know the maximum values add to give a new maximum
+  Constraint(ResultMax = LhsMax + RhsMax)
+  # The maximums implies a size for each of the values
+  Constraint(ResultSize = ToRepresent(ResultMax))
+  Constraint(LhsSize = ToRepresent(LhsMax))
+  Constraint(RhsSize = ToRepresent(RhsMax))
+  # Return our best guess to make the expressions around aware of us
+  return ResultMax
 \end{minted}
-\caption{The code adding the constraints for addition in the Spade compiler}
-\label{fig:BinaryExpression}
+  \cprotect\caption{Psuedo code that described the idea for inferring wordlengths with extra information -- what was used in the fourth attempt. Here \verb+PassedLhsMax+ and \verb+PassedRhsMax+ are type variables that sometimes exist and are results of typechecking similar expressions -- one can envision some code that calls \verb+CheckAddition+ for each of the subexpressions in the binary expression we check addition for. \verb+ToRepresent+ convert a maximum value to the smallest wordlength that can fit it. \verb+Largest+ is almost the opposite of \verb+ToRepresent+ and change a value to the maximum value such a wordlength can hold}
+\label{fig:psuedoFour}
 \end{figure}
 
-This approach worked, for some definition of working. This solution behaves poorly and causes some very frustrating error messages. Since the hidden type-variable stored in \verb+result_max+ can cause errors in typevariables that are not able to be referenced in the source code of the program -- this kind of code can cause hard to debug errors. The layer of indirection caused by \verb+result_max+ is required to allow unification of int's of various max number into the same size. The \verb+result_max+ variable is also not unified in the unification process which causes us to create a lot of variables with largely the same information without them being synchronized, this can cause inconsistencies with the type checker in edgecases. There is also extra information that is sent outside the AST and is not recorded. All of this points strongly to a different approach where a separate module tries to infer the wordlength.
+The psuedo code in Figure \ref{fig:psuedoFour} describe how an addition expression is wordlength inferred according to the fourth method. The code sent extra information -- besides of the wordlength stored in the type of each integer. This extra information also resulted in extra type variables which denoted the maximum value -- these type variables could not be explicitly manipulated and where hidden from the user of the language. These type variables were not strictly bound to anything and were hard to reference since they could not be found from the type they were constrained to if the constraints were satisfied and thus discarded. There was not a problem with the kind or number of constraints since \verb+LhsMax+ and \verb+RhsMax+ was always known or bound directly to a size.
+
+This was the first approach to produce better wordlength inference and handled expressions such as \verb!a + 1 + 1! as one would expect by not increasing the wordlength by 2 but by 1 when the type of \verb+a+ was larger than 2. There is also a very concrete way to introduce negative ranges -- just add another type variable. This means the solution clearly solves the requirements 1, 2, 3, 4 and 6 from Figure \ref{figReq} -- the resource usage was never investigated.
+
+This solution also introduced problems with the hidden type variables. Since the type variables for the maximum size cannot be referenced in any meaningful way from the type of the expression it was deemed be difficult to explain to the user of the language why a type-conclusion was reached. But since constraints were discarded after they were satisfied the relations between the type variables and the maximum size was also discarded -- this meant that range information could not be recovered. The problem of integrating AA was not prodded in since this solution was not good enough -- due to the potentially unsatisfactory error messages. The problem with equality constraints (\verb+=+) from Section \ref{sec:Forth} is also relevant, since it might force a value to have multiple wordlengths -- a neater solution is still less-than-or-equal constraint (\verb+<=+).
 
 \section{Other Implementations -- Just Curiosities}
 \label{sec:Other}
-There were two more attempts at an implementation inside the type checker, they are available on the git-branches \verb+the-sixth-attempt+ and \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+. Both these experiments yielded little of interest since they mostly verified the previous claims, mostly the implementations from Section \ref{sec:First} and Section \ref{sec:Second}. They were also very shallow changes since the more promising change outlined in Section \ref{sec:Seven} was started on instead.
+
+There were two more attempts at an implementation inside the type checker. Both these experiments yielded little of interest since they mostly verified the previous claims, mostly the implementations from Section \ref{sec:First} and Section \ref{sec:Second}. They were also very shallow changes since the more promising change outlined in Section \ref{sec:Seven} was started on instead. These ideas mainly focsed on re-testing old ideas and are of little interest for the final results.
+\cprotect\footnote{Available on the git-branches \verb+the-fifth-attempt-now-without-returns+ and \verb+the-sixth-attempt+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{The Seventh Implementations -- a Separate Module}
 \label{sec:Seven}
-After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted. Since the type checker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inference. These changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.
+After doing a lot of thinking and reasoning we decided to see how a separate module would look -- in theory this would give maximum flexibility in how the wordlength inference worked. Using a separate module for the wordlength logic also meant changing it in the future would be easier, if more experiments would be conducted.%
+\cprotect\footnote{Changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.}%
+Since the type checker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inference.%
 
-The idea for the implementation was to walk the entire AST after typechecking had run and monomorphisation was complete -- each entity was given to the wordlength-inference module called \verb+spade-wordlength-inference+. The algorithm from Figure \ref{fig:WLIAlgo} was then applied. Visit the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+, this is called an equation. Pick out all typevariables which are \verb+int<_>+ from the previous step, populating a mapping between type-variables and their wordlength. Then loop over all constraints from step 1 and try to evaluate the right-hand side. The evaluation method can be one of three modes: ''Old Mode'', ''Affine Arithmetic'' or ''Interval Arithmetic'', these options could also be enabled with the environment variable \verb+SPADE_INFER_METHOD+ to allow it to work with the swim buildsystem. If evaluation succeeded add the new variable to a new known set of variables and check there are no contradictions. Stop the loop if no more progress is made or we have looped as many times as there are equations. The result is then unified back into the AST for safekeeping. There are of course more details, and the Rust code for wordlength inference is hopefully quite readable. If you are interested we would recommend reading the source code directly. 
+
 
 As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigRational+s. The decision of using \verb+BigRational+ was to avoid even more noise in the AA implementation.
+
+
+\begin{figure}
+\begin{minted}[linenos]{python}
+def Visit(Construct):
+  Constraint = match Construct:
+    # Variables are already resolved so we just need to make sure the inference
+    # has id's that match 1:1 with the typechecker.
+    case Var(VarId):
+      if VarId not in KnownVariables:
+        KnownVariables[VarId] = GenerateNewId()
+      KnownVariables[VarId]
+
+    # Constants are simply the constant, the range of these are known here.
+    case Constant(Constant):
+      RangeFromConstant(Constant)
+
+    # Constants are simply the constant, the range of these are known here.
+    case Assignment(Var, Expr):
+      Constraints[VarId] = Visit(Expr)
+      NotAnExpression
+
+    # Binary expressions need to be recorded, we want to build up a complete
+    # list of the constraints for each type.
+    case BinaryExpr(Op='+', Lhs, Rhs):
+      Addition(Visit(Lhs), Visit(Rhs))
+    case BinaryExpr(Op='*', Lhs, Rhs):
+      Multiplication(Visit(Lhs), Visit(Rhs))
+
+    # Uniary expressions also need to be encoded.
+    case UnaryExpr(Op='-', Operand):
+      Negation(Visit(Operand))
+
+    # Flow control constructors need to be handled differently, for an If we #
+    # combine them and realize that the result must lie inside the union of both
+    # branches - we return either True or False but we cannot know which for
+    # all cases.
+    case If(Condition, True, False):
+      Visit(Condition)
+      Union(Visit(True), Visit(False)
+
+  # Register this constraint, since *all* expressions have types we want as
+  # many constraints as possible.
+  Constraints[Construct] = Constraint
+\end{minted}
+  \caption{Psuedo code for visiting the entire syntax tree -- some details have been omitted. The algorithm handles each node separately and visits all the inner nodes, taking care to visit \textit{every} expression in the syntax tree and accumulating constraints for the types they relate to.}
+\label{fig:AstWalker}
+\end{figure}
+
+
+The idea for the implementation was to walk the entire AST a second time after typechecking had run and monomorphisation was completed -- each entity was given to the wordlength-inference module\footer{The wordlength-inference module was called \verb+spade-wordlength-inference+} -- this built up constraints described in the algorithm from Figure \ref{fig:AstWalker}. The algorithm makes sure to visit \textit{every} expression in the AST and record down their relation to each other and since we have already typechecked we know which expressions need to constraints built up. The algorithm in Figure \ref{fig:AstWalker} produces a mapping between language constructs and constraint equations relating it to expressions that have a relation. This mapping is almost what we want, and we can use it to produce the mapping from a type variable and an equation which describes the expressions size as related to other expressions. We can of course have multiple equations for the same type variable as long as they are consistent with each other. After all of these constraint equations have been gathered up we can pass the equations onto a solver. 
 
 \begin{figure}
 \begin{minted}[linenos]{python}
 if InferMethod == OLD: return
 
-(Variables, Equations) = extract_variables_and_equations(AST, TypeChecker)
-Known = extract_known_types(Variables, AST)
+# Here we call `Visit` internally to visit all the relevant expressions, we get
+# out a mapping from type variables to equations.
+(Variables, Equations) = VisitAllIntegerExpressions(AST, TypeChecker)
+# We can also ask the typesystem for the sizes it has deduced, since we may not
+# disagree with the typechecker. A mapping from typevariables to their known size,
+# we will fill this in with more information as we proceed.
+Known = ExtractKnownWordlengths(Variables, AST)
 
 for _ in Equations:
   KnownAtStart = Known
   for (Var, Body) in Equations:
     MaybeValue = case InferMethod of
-                  IA -> evaluate_using_ia(Known, Body)
-                  AA -> evaluate_using_aa(Known, Body)
+                  IA -> EvaluateUsingIa(Known, Body)
+                  AA -> EvaluateUsingAa(Known, Body)
+                  AAIA -> EvaluateUsingAaia(Known, Body)
     match MaybeValue:
-      Just Value -> inject_and_check_for_contradictions(Value, Known)
+      Just Value -> InjectAndCheckForContradictions(Value, Known)
       Nothing -> pass
+  # If we did not progress we abort
   if KnownAtStart == Known:
     break
 
 for Var in Variables:
   unify(TypeChecker, Var, Known[Var])
 \end{minted}
-\caption{The algorithm used in the seventh attempt to determine the wordlength for all expressions in a spade-program.}
+  \cprotect\caption{The algorithm used in the seventh attempt to determine the wordlength for all expressions in a spade-program. \verb+VisitAllIntegerExpressions+ visits all the integer expressions in the AST with some help from the typechecker state and returns a set of all type variables mentioned in an equation and a list of tuples containing type variables and the requirements posed from their wordlengths.}
 \label{fig:WLIAlgo}
 \end{figure}
+
+The algorithm from Figure \ref{fig:WLIAlgo} has a runtime of $O(n^2*d)$ where $n$ is the number of equations and $d$ is the largest depth of the equations -- since we are bounded by running the loop a maximum of $n$ times. Though average runtime is significantly better since it can solve most sets of equations efficiently in fewer iterations. If the algorithm can make progress we also know that it will, since it evaluates all equations for each pass -- this is a form of breath first search since we constantly re-check the equations and disallow variables to shrink in size we always find more information with each iteration.
+
+The inference algorithm from Figure \ref{fig:WLIAlgo} can be applied from the constraints gathered from the algorhtm in Figure \ref{fig:AstWalker}. This means we've visited the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+. We can then feed these equations into a solver and use them to solve more equations -- here we can pick between using using IA, AA or AAIA. In the implementation this could be set when running the compiler \footnote{The different wordlenght inference options could be swapped using the environment variable \verb+SPADE_INFER_METHOD+, the inference logic could also be disabled entirely, this was required since the Swim buildsystem is very peculiar about the flags passed to the compiler.}. We can then enrich the typecheckers types with our new findings which lets us reuse the rest of the compiler tool chain -- very nifty!
 
 \subsection{Evaluating the Changes}
 This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+ using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+. A simple bash script was made to record the number of memories used in the FPGA when the command was executed and this was stored in a file. The program was compiled 50 times for the three configurations: ''Old Mode'' -- denoted by ''ONE'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA'', the number of LUTs used was then feed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
@@ -208,7 +307,7 @@ This implementation leaves a gaping hole roughly the size of an elephant. How do
 
 \section{The Seventh Implementation Extended -- Doubling Down on Ranges}
 \label{sec:Seven2}
-After the raging success of the implementation in Section \ref{sec:Seven} it was decided that some kind of syntax was needed for these changes to more easily communicate the actual ranges of values. This leads to the changes that are available in the git-branch \verb+wordlength-inference/push-the-changes-further+ with git-commit hash \verb+ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e+, these changes are also a merge request on gitlab which is still up at the time of writing (\url{https://gitlab.com/spade-lang/spade/-/merge_requests/208}). The scoping of these changes was very important. A lot of the details and changes discussed are very opinionated and this thesis tries to not focus too closely on the design of programming languages and more on the actual implementation of the language features, though some background and reason will of course be given. 
+After the raging success of the implementation in Section \ref{sec:Seven} it was decided that some kind of syntax was needed for these changes to more easily communicate the actual ranges of values. \cprotect\footnote{Changes that are available in the git-branch \verb+wordlength-inference/push-the-changes-further+ with git-hash \verb+ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e+} These changes are also a merge request on gitlab which is still up at the time of writing (\url{https://gitlab.com/spade-lang/spade/-/merge_requests/208}). The scoping of these changes was very important. A lot of the details and changes discussed are very opinionated and this thesis tries to not focus too closely on the design of programming languages and more on the actual implementation of the language features, though some background and reason will of course be given. 
 
 There was an earlier attempt similar work previously -- the work had been abandoned since the changes in the type checker and other compilation steps are non-trivial. The previous work is available in a closed merge request from the official Spade repository \url{https://gitlab.com/spade-lang/spade/-/merge_requests/23}. A problem that was outlined in the merge request was that no changes were made in the type checker and that the changes were purely syntactical -- which caused some implementation details to be harder. Since there now is a working implementation outlined in Section \ref{sec:Seven} of a range based system the constraints in the type inference-stage need not be updated. Basing the range based syntax on the newly implemented wordlength inference simplifies a lot of details.
 

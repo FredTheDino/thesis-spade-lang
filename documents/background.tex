@@ -13,9 +13,17 @@ Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL
 \subsection{Swim}
 The Spade-language has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
-\section{Rust}
+\subsection{Rust}
 Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler and snippets of Rust-code are shown in this work. \cite{src:Rust}
 
+\subsection{The Spade Typechecker}
+\todo{Mention ConstraintExpr and Requirements and how constraints are discarded. BitsToRepresent}
+
+\subsection{How Spade Handles Wordlengths}
+\todo{}
+
+\subsection{HIR-lowering}
+\todo{}
 
 \section{Introduction to Compiler Structure}
 What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
@@ -217,6 +225,12 @@ In conclusion, unification lets us define two types as the same type and send al
 After all the typechecking and typeinference has been done monmorphisation can take place. This phase turns generic functions into concrete function -- that is to say all functions with generics like \verb+fn add<A>(x: A, y: A) -> A+ are given concrete types like \verb+fn add(x: i32, y: i32) -> i32+. This means the same code can lead to multiple function bodies. Monomorphisation creates a new instance of a function for each of the generic arguments given, and Rust does something similar. \cite{src:rustMono}
 
 Monomorphisation is often considered a performance optimization, but for HDLs this step is absolutely required since the hardware does not handle function pointers or any kind of indirection. For it to be possible to pass around program code as a concept there would also need to be some kind of control flow structure -- the only control flow structure available on an FPGA is a mask. So modeling virtual methods from object oriented programming would need to be done using masks, this means the resource usage would grow with the number of implementations for a virtual method, since we cannot know at compile time which of these results is the right one (unless we use monomorphisation) -- the scaling of this solution negates all the benefits of virtual methods and is not a good fit for FPGA development where resources are scarce. 
+
+\subsection{The Curry-Howard Isomorphism}
+\todo{And why mapping logic systems and type systems between eachother is a good idea}
+
+\subsection{The Lambda Cube}
+\todo{Mention Haskell, PureScript and Coq and some about the Lambda Cube}
 
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
