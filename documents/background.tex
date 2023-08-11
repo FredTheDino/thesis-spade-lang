@@ -13,8 +13,8 @@ Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL
 \subsection{Swim}
 The Spade-language has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
-\subsection{Rust}
-Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler and snippets of Rust-code are shown in this work. \cite{src:Rust}
+\subsection{Spade syntax}
+\todo{Generics and simple functions}
 
 \subsection{The Spade Typechecker}
 \todo{Mention ConstraintExpr and Requirements and how constraints are discarded. BitsToRepresent}
@@ -24,6 +24,16 @@ Rust is a statically typed general purpose systems programming language. The lan
 
 \subsection{HIR-lowering}
 \todo{}
+
+\subsection{Rust}
+Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler and snippets of Rust-code are shown in this work. \cite{src:Rust}
+
+\subsubsection{BigInt}
+\todo{}
+
+\subsubsection{BigRational}
+\todo{}
+
 
 \section{Introduction to Compiler Structure}
 What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
@@ -235,7 +245,6 @@ Monomorphisation is often considered a performance optimization, but for HDLs th
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
 
-Mathematical expressions are everywhere -- and somehow even more so in computer science since the only thing computers can do is evaluate expressions. What is mainly useful for this work is what is referred to as self validating numerical methods -- these methods give you a way of estimating the potential values of arbitrary mathematical expressions. Two of these methods will be the focus of this work, interval arithmetic (IA) and affine arithmetic (AA). There is an excellent explanation of both IA and AA by \citeauthor{src:affAri}\cite{src:affAri} -- the following section is a short version to cover the absolute basics of the material. This section simplifies away a lot of details when it comes to rounding -- which is crucial if this is to be implemented for anything using floating point numbers -- but since this work is only interested in integers this can be simplified.
 
 Affine arithmetic and interval arithmetic are two common ways to estimate the value of arbitrary mathematical expressions. AA and IA can be applied to estimate bounds for mathematical functions and thus all things that can be modeled by mathematical functions. Since programs can be modeled using mathematical expressions IA and AA have a place in static analysis of programs, which is the focuses of this work. These methods are often referred to as over-estimation or self validating numerical methods.
 
@@ -303,7 +312,7 @@ Affine arithmetic may seem like the superior option in all cases -- this is not 
 
 This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fare a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and would give us a range poking out below $0$ while interval arithmetic would correctly infer the lower bound of $0$.
 
-When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are guaranteed to hold all potential values, we can take the subset of the guesses and still keep correctness.
+When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are guaranteed to hold all potential values, we can take the subset of the guesses and still keep correctness. The method of taking the smallest subset is referred to in this report as AAIA -- since we run both methods.
 
 \section{Wordlength Inference and Typechecking in Spade}
 \label{sec:TheProblem}
