@@ -190,7 +190,7 @@ def Visit(Construct):
     # Constants are simply the constant, the range of these are known here.
     case Assignment(Var, Expr):
       Constraints[VarId] = Visit(Expr)
-      NotAnExpression
+      NoInformation
 
     # Binary expressions need to be recorded, we want to build up a complete
     # list of the constraints for each type.
@@ -211,6 +211,12 @@ def Visit(Construct):
       Visit(Condition)
       Union(Visit(True), Visit(False)
 
+    # Note that functions became opaque, which is a large limitation
+    case Call(Callee, Args):
+      for Arg in Args: Visit(Args)
+      # Visit(Callee) - we would love to return some information here, but it has been discarded earlier.
+      NoInformation
+
   # Register this constraint, since *all* expressions have types we want as
   # many constraints as possible.
   Constraints[Construct] = Constraint
@@ -221,6 +227,8 @@ def Visit(Construct):
 
 
 The idea for the implementation was to walk the entire AST a second time after typechecking had run and monomorphisation was completed -- each entity was given to the wordlength-inference module\cprotect\footnote{The wordlength-inference module was called \verb+spade-wordlength-inference+} -- this built up constraints described in the algorithm from Figure \ref{fig:AstWalker}. The algorithm makes sure to visit \textit{every} expression in the AST and record down their relation to each other and since we have already typechecked we know which expressions need to constraints built up. The algorithm in Figure \ref{fig:AstWalker} produces a mapping between language constructs and constraint equations relating it to expressions that have a relation. This mapping is almost what we want, and we can use it to produce the mapping from a type variable and an equation which describes the expressions size as related to other expressions. We can of course have multiple equations for the same type variable as long as they are consistent with each other. After all of these constraint equations have been gathered up we can pass the equations onto a solver. 
+
+The pseudo code in 
 
 \begin{figure}
 \begin{minted}[linenos]{python}
@@ -259,7 +267,9 @@ The algorithm from Figure \ref{fig:WLIAlgo} has a runtime of $O(n^2*d)$ where $n
 The inference algorithm from Figure \ref{fig:WLIAlgo} can be applied from the constraints gathered from the algorhtm in Figure \ref{fig:AstWalker}. This means we've visited the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+. We can then feed these equations into a solver and use them to solve more equations -- here we can pick between using using IA or AA. In the implementation this could be set when running the compiler \cprotect\footnote{The different wordlenght inference options could be swapped using the environment variable \verb+SPADE_INFER_METHOD+, the inference logic could also be disabled entirely, this was required since the Swim buildsystem is very peculiar about the flags passed to the compiler.}. We can then enrich the typecheckers types with our new findings which lets us reuse the rest of the compiler tool chain -- very nifty!
 
 \subsection{Evaluating the Changes}
-This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+ using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+. A simple bash script was made to record the number of LUTs used in the FPGA when the command was executed and this was stored in a file. The program was compiled 50 times for the three configurations: ''Old Mode'' -- denoted by ''ONE'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA'', the number of LUTs used was then feed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
+The requirements from Figure \ref{figReq} where almost all satisfied -- this solution requires fewer \verb+sext+, is easier to trouble shoot, makes it simple to add in unsigned integers, allows swapping back to the old way of doing wordlength inference -- the only exception being that it is not integrated into the typechecker. That the wordlength inference is not integrated into the typechecker is both a pro and a con, it simplifies the implementation and makes it easier to change if one wants to make modifications to the wordlength inference semantics without affecting the typeinference as a whole. The wordlength inference module is however limited to work \textit{with} the typechecker and the code only hints about it in the unification step, instead of one slightly larger complex system we now have two somewhat smaller systems that may not disagree. The clearest example of this problem can be seen in Section \
+
+The implementation was also run on multiple small programs. Some were written to show which expressions can be wordlength inferred and some where written to measure the number of LUTs to see how the performance was different. 
 
 \begin{figure}
 \begin{center}
@@ -271,13 +281,14 @@ Variance for number of LUTs &13.2&6.0&8.2 \\
 Largest number or LUTs&186.0&181.0&183.0 \\
 Smallest number of LUTs&171.0&171.0&167.0 \\
 \end{tabular}
-  \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inference in table form.}
+  \caption{The number of LUTs after PNR for the project spade-memory-display with different versions of wordlength inference in table form. The experiment was run 51 times.}
   \label{fig:SpadeCompilations50Table}
 \end{center}
 \end{figure}
 
+This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+\cprotect\footnote{using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+}. A simple bash script was made to record the number of LUTs used in the FPGA when the command was executed and this was stored in a file. The program was compiled 51 times for the three configurations: ''Old Mode'' -- denoted by ''ONE'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA'', the number of LUTs used was then feed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
 
-Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for the number of LUTs generated using ''IA (Interval Arithmetic)'' and ''AA (Affine Arithmetic)''. The average stays almost the same for all methods with ''ONE (The Old Version)'' being a bit higher than the others -- but not by a statistical margin.
+Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for the number of LUTs generated using ''IA (Interval Arithmetic)'' and ''AA (Affine Arithmetic)''. The average stays almost the same for all methods with ''ONE (The Old Version)'' being a bit higher than the others -- but not by a wide margin.
 
 \begin{figure}
 \begin{minted}[linenos]{rust}
@@ -300,17 +311,19 @@ fn add_and_subtract(x: int<5>) -> int<8> {
   \label{fig:CodeThatWorksNow}
 \end{figure}
 
-These changes did shown promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} were typechecked a lot better by the spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_six_times+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- compared to the ''Old'' approach which returns an integer with 11 bits. % The number of cases where a frivolous truncation was needed has decreased due to these changes. This can lead to clearer and more concise code.
+These changes did shown promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} were typechecked a lot better by the spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_and_subtract+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- compared to the ''Old'' approach which returns an integer with 11 bits. Looking at this code fewer truncations are needed since the compiler knows more about the actual size of the expressions. There is also an argument for the analysis part of this code, a function that returns an \verb+int<0>+ is probably not doing anything meaningful and should probably be optimized out.
 
-
-This implementation leaves a gaping hole roughly the size of an elephant. How does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the type checker (except disabling the old wordlength inference), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seemed to work well and it was decided that the best course of action was to extend this implementation.
+This implementation does however leave a question unanswered: how does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the type checker (except disabling the old wordlength inference), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approached seemed to work well and it was decided that the best course of action was to extend this implementation.
 
 \section{The Seventh Implementation Extended -- Doubling Down on Ranges}
 \label{sec:Seven2}
 After the success of the implementation in Section \ref{sec:Seven} more work was needed to communicate the intended ranges from a programmer, thus began changes that updated the syntax and the typechecker in Spade to supportrange. There was however a previous attempt at adding this kind of range syntax and are available in the Spade git-lab\cprotect\footnote{\url{https://gitlab.com/spade-lang/spade/-/merge_requests/208}} that focused on the syntactical changes and avoided the typesystem changes, the merge request has since been abandoned. The new changes that needed to be made to the syntax took inspiration from the previous attempt.
-The new syntax and typesystem changes had to be scoped accordingly and a lot of the details and changes discussed are very opinionated and this thesis tries to not focus too closely on the design of programming languages and more on the actual implementation of the language features, though some background and reason will of course be given. \cprotect\footnote{Changes that are available in the git-branch \verb+wordlength-inference/push-the-changes-further+ with git-hash \verb+ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e+} 
+The new syntax and typesystem changes had to be scoped accordingly and a lot of the details and changes discussed are very opinionated and this thesis tries to not focus too closely on the design of programming languages and more on the actual implementation of the language features, though some background and reason will of course be given.\cprotect\footnote{Changes that are available in the git-branch \verb+wordlength-inference/push-the-changes-further+ with git-hash \verb+ee9980c6ec518dbdf0794dbb9193c5b1c9b6945e+} 
 
-The previous attempt at changing the wordlength syntax tried to work from the syntax forward without interfering with the typesystem -- this was deemed to be harder than expected. This new attempt tried to change both the syntax and the typesystem at once -- this proved to be beneficial but the change was also quite large and caused a large break in the syntax and semantics of the Spade language. Basing the range based syntax on the newly implemented wordlength inference simplifies a lot of details.
+The previous attempt at changing the wordlength syntax tried to work from the syntax forward without interfering with the typesystem -- this was deemed to be harder than expected. This new attempt tried to change both the syntax and the typesystem at once -- this proved to be beneficial but the change was also quite large and caused a large break in the syntax and semantics of the Spade language. Basing the range based syntax on the newly implemented wordlength inference does alleviate some of the complexity, but it is also explicitly bound to this functionality. This also means that the old wordlength inference algorithm was broken and ceased to work, and no new results could be collected with it.
+
+Another method besides AA and IA was introduced -- this method is called AAIA and is the result of running both AA and IA in parallel and taking the subset range of both methods, this always produces the best results.
+
 
 \begin{figure}
   \begin{minted}[linenos]{rust}
@@ -323,6 +336,9 @@ fn add_one<#A, #B, #M, #N>(x: int<A..B>) -> int<M..N> {
 }
 
 entity main(clk: clock, rst: bool) -> int<14..14> {
+  // Does not compile, due to the inner function call returning an unknown type
+  // let q: int<12..12> = twice(twice(3));
+
   let a: int<6..6> = twice(3);
   let b: int<7..7> = add_one(a);
   let c: int<14..14> = twice(b);
@@ -333,9 +349,11 @@ entity main(clk: clock, rst: bool) -> int<14..14> {
   \label{fig:BetterProgram}
 \end{figure}
 
-The syntax of the Spade language was first of all changed to parse \verb+int+ types differently, the syntax \verb+int<L..H>+ allowing ranges to be specified. The old syntax \verb+int<W>+ was still supported but was syntactic-sugar for \verb!int<!$-(2^{w+1})$\verb!..!$(2^{w+1})-1$\verb!>! (the $+1$ part comes from all integers being signed in Spade) since this would give partial compatibility with older spade-program. In the previous work a lot more syntaxes were added but they were questionable extraneous for updating the type inference. This change makes it possible to propagate the range information from one function to another in the form of a range -- which is more precise than a wordlength which was what was available before. The Figure \ref{fig:BetterProgram} shows this new syntax in a small example spade-program. The extra variables \verb+a+, \verb+b+ and \verb+c+ are required to make the program compile, since the compiler has trouble typechecking the variables between the expressions, this is a problem of the unification process and that there are insufficient requirements on some generics.
+The syntax of the Spade language was first of all changed to parse \verb+int+ types differently, the syntax \verb+int<L..H>+ allowing ranges to be specified. The old syntax \verb+int<W>+ was still supported but was syntactic-sugar for \verb!int<!$-(2^{w+1})$\verb!..!$(2^{w+1})-1$\verb!>! (the $+1$ part comes from all integers being signed in Spade) since this would give partial compatibility with older spade-program. In the previous work a lot more syntaxes were added but they were questionable extraneous for updating the type inference. This change makes it possible to propagate the range information from one function to another in the form of a range -- which is more precise than a wordlength which was what was available before. The Figure \ref{fig:BetterProgram} shows this new syntax in a small example spade-program.
 
-It is also worth noting that the extra types in on lines 10 to 12 in Figure \ref{fig:BetterProgram} can be larger according to the current rules -- but must include the constants defined there.
+The extra variables \verb+a+, \verb+b+ and \verb+c+ are required to make the program compile, since the compiler has trouble typechecking the variables between the expressions -- so the expression \verb+twice(twice(1))+ would not succeed to compile, this is a problem of the unification process and that there are insufficient requirements on some generics. The cause of this is the same as the main drawback of this implementation, the typesystem is not aware of the wordlength infernece and cannot provide the information that is needed, these function calls become opaque to the wordlength inference since the return type of the function is not available. This problem is caused by a lack of information, which can be solved by either adding more information to the state of the typechecker so the wordlength inference can inspect more, or by integrating the wordlength inference into the typechecker directly (which was the method the old wordlength inference method), or by building a new typechecker inside the wordlength inference module. The first or second options are preferable over the third.
+
+It is also worth noting that the extra types in on lines 10 to 12 in Figure \ref{fig:BetterProgram} can be larger according to the current rules -- but must include the actually expected values. A line like \verb+let z: int<-1..2> = twice(3)+ would not compile, since the expected value of the function call is indeed 6 -- and 6 does not exist between -1 and 2. This has caused the system to be the worst possible kind of system, the one that complains when the programmer does something wrong while being completely helpless of solving the problem itself.
 
 The \verb+int+ type also had to change to work with 2 generic arguments -- a lower and a higher bound. These types had to be inserted in the type checker. Making this change in full would require rewriting almost every single spade-compiler test, and would be a substantial amount of work and time, more time than this thesis has been allotted. The decisions to break with the best practices of software development was taken to make sure the thesis could be finished at all. Some of the tests were fixed where it was deemed simple to do so. Most of these changes were very mechanical though. The wordlength inference code also needed to be changed slightly to accept the new ranges as inputs from the type checker.
 
@@ -346,10 +364,10 @@ An extensions was also made to the wordlength inference methods described in Sec
 The very basic implementation in this thesis does not handle memories and registers. Though supporting them should be very minor work, but requires a lot more verification. There are also questions as to the language features of registers and memories should interact with the range-based syntax of integers. The unification rules from the type checker are also very strict and disallow things like passing a constant to a function that takes an integer argument that is not constant. How these problems are to be solved is according to the thesis authors a matter of taste, though these problems do exists and needs addressing. 
 
 \subsection{Evaluation the Changes}
-After a change has been made it needs to be verified and tested. A custom version of the compiler with the changes described in Section \ref{sec:Seven2}. Each program was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' -- and a clean of the build environment was conducted between all steps. The changes breaks a lot of compatibility with older Spade-versions which severely limits the number of Spade programs that can be used since a dependency written for a different version of the compiler is not going to compile.
+After a change has been made it needs to be verified and tested. A custom version of the compiler with the changes described in Section \ref{sec:Seven2}. Each program was PNRd 51 times for each of the three configurations AA, IA and AAIA -- and a clean of the build environment was conducted between all steps. The changes breaks a lot of compatibility with older Spade-versions which severely limits the number of Spade programs that can be used since a dependency written for a different version of the compiler is not going to compile.
 
 \subsubsection{spade-memory-display}
-The small library \verb+spade-memory-display+ was used for evaluation. The changes to the compiler required changes to the library code in order to compile, this made it unclear how to compare directly with older versions of the compiler since small code changes can have large changes in the output. The library code was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' with \verb+swim clean+ ran between each build.
+The small library \verb+spade-memory-display+ was used for evaluation. The changes to the compiler required changes to the library code in order to compile, this made it unclear how to compare directly with older versions of the compiler since small code changes can have large changes in the output. The library code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build.
  
 \begin{figure}
 \begin{center}
@@ -370,7 +388,7 @@ SB_WARMBOOT: 0/1       (0.0%)
 All builds produced the same metrics and is presented in Figure \ref{fig:SMDoutput}. The metrics shows no difference for any of the 153 place and route compilation of the spade-library. All of the compilations used 190 LUTs. 
 
 \subsubsection{A Simple FIR-filter}
-FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations ''AA'', ''IA'' and ''AAIA'' with \verb+swim clean+ ran between each build. The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}.
+FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build. The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}.
 
 \begin{figure}
 \begin{center}
@@ -397,31 +415,39 @@ SB_WARMBOOT: 0/1     (0.0%)
   \label{fig:FIRoutput}
 \end{figure}
 
-The Figure \ref{fig:FIRoutput} shows the output from every PNR run for the FIR-filter program. All the outputs were identical regardless of what wordlength inference method was used. It is also worth noting that for ''IA'' and ''AAIA'' the return type of the \verb+fir+-function can be simplified to \verb+int<0..1000000>+. The return type is required to be \verb+int<-500000..1000000>+ for ''AA'' which goes into the negative even though it cannot possibly happen.
-
-\subsubsection{Comparing The Ranges For Simple Expressions}
-The wordlength inference was also compared on 3 expressions: $a - a + a - a + a - a$, $(a - b) \cdot (b - a)$ and $a \cdot a \cdot b \cdot b \cdot c \cdot c$, for all of the 3 methods ''AA'', ''IA'' and ''AAIA''. All arguments had a wordlength of $5$ and of the range $0..100$ the resulting range was noted in the table in Figure \ref{fig:CompareThings}.
-
 \begin{figure}
+\begin{itemize}
+  \item IA: \verb+int<0..1000000>+
+  \item AA: \verb+int<-500000..1000000>+
+  \item AAIA: \verb+int<0..1000000>+
+\end{itemize}
+  \caption{The return types for the fir-filter test program where the wordlength inference method was varied.}
+  \label{figRangeRes}
+\end{figure}
+
+The Figure \ref{fig:FIRoutput} shows the output from every PNR run for the FIR-filter program. All the outputs were identical regardless of what wordlength inference method was used. It is also worth noting that for IA and AAIA the return type of the \verb+fir+-function can be simplified to \verb+int<0..1000000>+. The return type is required to be \verb+int<-500000..1000000>+ for AA which goes into the negative even though it cannot possibly happen. The returned ranges are shown in Figure \ref{figRangeRes}.
+
+\subsubsection{Comparing the Ranges For Simple Expressions}
+The wordlength inference was also compared on 3 expressions: $a - a + a - a + a - a$, $(a - b) \cdot (b - a)$ and $a \cdot a \cdot b \cdot b \cdot c \cdot c$, for all of the 3 methods AA, IA and AAIA. All arguments had a wordlength of $5$ and of the range $0..100$ the resulting range was noted in the table in Figure \ref{fig:CompareThings}.
+
+\begin{figure}[h]
   \centering
   \begin{tabular}{l | c c c}
                                     & IA     & AA     & AAIA    \\
-                                    & \multicolumn{3}{c}{Wordlength $= 5$} \\
+                                    & \multicolumn{3}{c}{Input Wordlength $= 5$} \\
     \hline
     $a - a + a - a + a - a$   & $-93..93$ & $0..0$          & $0..0$       \\
     $(a - b) \cdot (b - a)$             & $-961..961$ & $0..0$           & $0..0$       \\
     $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $-15728640..16777216$      & $-16794692..16794693$      & $-15728640..16777216$ \\[0.7em]
-                                    & \multicolumn{3}{c}{Range $= 0..100$} \\
+                                    & \multicolumn{3}{c}{Input Range $= 0..100$} \\
     \hline
     $a - a + a - a + a - a$   & $-300..300$ & $0..0$          & $0..0$       \\
     $(a - b) \cdot (b - a)$             & $-10000..10000$ & $0..0$           & $0..0$       \\
     $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $0..10^{12}$      & $-9.6875^{12}..10^{12}$      & $0..10^{12}$
   \end{tabular}
 
-  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the word length of 5 or are in the range 0 to 100.}
+  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the word length of 5 for the first three rows and all variables are in the range 0 to 100 for the last three rows. The leftmost column shows the expression that was wordlength inferred.}
   \label{fig:CompareThings}
 \end{figure}
 
-The table in Figure \ref{fig:CompareThings} shows that ''AAIA'' always produced the tightest ranges. The last multiplication test on the third row also shows an example expression where ''IA'' produces a tighter range than ''AA''.
-
-
+Figure \ref{fig:CompareThings} shows a table where multiple different expressions had the wordlength inferrence algorithm applied to them. The inner cells in the table denote the evaluated range of the expression in the left most column according to each of the three methods outlined in the top column, all this for 2 different configurations of the input variables. Either all variables had the type \verb+int<5>+ so $a$, $b$ and $c$ had a given wordlength of 5 for the first three rows in the table, or the variables $a$, $b$ and $c$ had a type of \verb+int<0..100>+ for the bottom 3 lines in the table. From the table we can easily read out that AAIA always produced the tightest ranges. The multiplication expression ($a \cdot a \cdot b \cdot b \cdot c \cdot c$) shows an example expression where IA produces a tighter range than AA and why the AAIA.

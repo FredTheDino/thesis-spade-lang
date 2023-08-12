@@ -142,6 +142,9 @@ There are different operations which can be done to an abstract syntax tree. In 
 
 Because of its flexibility the AST is very a very popular format to output from the parsing stage. In the Spade-compiler the AST is annotated with type information as it is discovered -- this annotated AST is then feed either to a language server or a code generation phase.
 
+\subsection{Syntax and Semantics}
+\todo{}
+
 \section{Type Checking} % Maybe `inner layers`?
 \label{sec:TypeChecking}
 Type checking is a way of making sure the program is internally consistent -- there are no contradictions inside to program to the program itself. Type checking can be done in different ways with different pros, cons or preferences \cite{src:TypeCheckersBook}. The type checker in Spade can infer types and deduce things about the program, like ``the first argument is a 3-bit integer value, but you gave an enum`` \cite{src:spadeAnHDL}.
