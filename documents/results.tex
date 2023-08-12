@@ -289,8 +289,6 @@ def Addition(A, B):
 def Multiplication(X, Y):
   # This step introduces a new noise variable
   P = RangeToAAF(Range::Multiplication(X[0]..X[0], Y[0]..Y[0]))
-  Gamma = 
-  Delta = 
   # The swapped order of Y[0] and X[0] is not a mistake
   Affine(X, Y, Y[0], X[0], -P[0], (Rad(X) * Rad(Y)) + Rad(P))
 
