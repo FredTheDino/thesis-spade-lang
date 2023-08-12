@@ -167,10 +167,7 @@ After doing a lot of thinking and reasoning we decided to see how a separate mod
 \cprotect\footnote{Changes are available on the branch \verb+the-seventh-attempt-almost-as-simple-as-attempt-one+ with git-hash \verb+889afd61a59f04f60730964b8ae7a2703110dd99+, these changes were merged and is available in the PR hosted on \url{https://gitlab.com/spade-lang/spade/-/merge_requests/200}.}%
 Since the type checker would not be changed as much old programs could still be compiled and thus compared with and without the more advanced wordlength inference.%
 
-
-
 As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigRational+s. The decision of using \verb+BigRational+ was to avoid even more noise in the AA implementation.
-
 
 \begin{figure}
 \begin{minted}[linenos]{python}
@@ -179,9 +176,7 @@ def Visit(Construct):
     # Variables are already resolved so we just need to make sure the inference
     # has id's that match 1:1 with the typechecker.
     case Var(VarId):
-      if VarId not in KnownVariables:
-        KnownVariables[VarId] = GenerateNewId()
-      KnownVariables[VarId]
+      Var(VarId)
 
     # Constants are simply the constant, the range of these are known here.
     case Constant(Constant):
@@ -198,6 +193,11 @@ def Visit(Construct):
       Addition(Visit(Lhs), Visit(Rhs))
     case BinaryExpr(Op='*', Lhs, Rhs):
       Multiplication(Visit(Lhs), Visit(Rhs))
+
+    # Bitwise and is very hard to reason about and we make a very pessimistic
+    # guess
+    case BinaryExpr(Op='&', Lhs, Rhs):
+      Union(BitManip(Visit(Lhs)), BitManip(Visit(Rhs)))
 
     # Uniary expressions also need to be encoded.
     case UnaryExpr(Op='-', Operand):
@@ -228,7 +228,101 @@ def Visit(Construct):
 
 The idea for the implementation was to walk the entire AST a second time after typechecking had run and monomorphisation was completed -- each entity was given to the wordlength-inference module\cprotect\footnote{The wordlength-inference module was called \verb+spade-wordlength-inference+} -- this built up constraints described in the algorithm from Figure \ref{fig:AstWalker}. The algorithm makes sure to visit \textit{every} expression in the AST and record down their relation to each other and since we have already typechecked we know which expressions need to constraints built up. The algorithm in Figure \ref{fig:AstWalker} produces a mapping between language constructs and constraint equations relating it to expressions that have a relation. This mapping is almost what we want, and we can use it to produce the mapping from a type variable and an equation which describes the expressions size as related to other expressions. We can of course have multiple equations for the same type variable as long as they are consistent with each other. After all of these constraint equations have been gathered up we can pass the equations onto a solver. 
 
-The pseudo code in 
+\begin{figure}
+\begin{minted}[linenos]{python}
+# Definitions of the operations that are constructed by the Visit function
+def Var(A..B):
+  A..B
+
+def Addition(A..B, P..Q):
+  (A + P)..(B + Q)
+
+def Multiplication(A..B, P..Q):
+  Min(A * Q, A * P, B * Q, B * P)..Max(A * Q, A * P, B * Q, B * P)
+
+def Union(A..B, P..Q):
+  Min(A, P)..Max(B, Q)
+
+def Negation(A..B):
+  -B..-A
+
+def BitManip(A..B):
+  # We assume the size of the integer doesn't change so discard all information
+  # except the wordlength
+  WordlengthToRange(RangeToWordlength(A, B))
+
+def ToRange(A..B):
+  A..B
+
+def NoInformation:
+  pass
+
+\end{minted}
+  \cprotect\caption{An outline of the different range procedures, this explains how each constraint operation for the \verb+Visit+-function should be evaluated if you want to use the IA method, each definition takes ranges and a low and a high range are broken apart in the arguments for readability, where the symbol before \verb+..+ denotes the lower bound and the symbol after the higher bound.}
+\label{fig:IaInference}
+\end{figure}
+
+The IA method has is defined to do the following rudimentary operations from Figure \ref{fig:IaInference} when we try to evaluate the constraint, if any variable is unknown we simply abort trying to evaluate the constraint and hope we get more information somewhere else.
+
+\begin{figure}
+\begin{minted}[linenos]{python}
+# Definitions of the operations that are constructed by the Visit function
+
+# Consider each variable a mapping, where the value at index 0 denotes a constant
+# and all other indices represent noise variables.
+def Var(I, A..B):
+  [0: (A + B) / 2, I: (A - B) / 2]
+
+def RangeToAAF(A..B):
+  # This operation is Opaque
+  U = NewUniqueIndex()
+  [0: (A + B) / 2, U: (A - B) / 2]
+
+def Rad(A):
+  # Sum all coefficents for noise variables - so everything except the constant
+  # at index 0
+  Sum(A[/0])
+
+def Addition(A, B):
+  [I: (A[I] or 0) + (B[I] or 0) for I in Union(Indicies(A), Indicies(B))]
+
+def Multiplication(X, Y):
+  # This step introduces a new noise variable
+  P = RangeToAAF(Range::Multiplication(X[0]..X[0], Y[0]..Y[0]))
+  Gamma = -P[0]
+  Delta = (Rad(X) * Rad(Y)) + Rad(P);
+  # The swapped order of Y and X is not a mistake
+  Affine(X, Y, Y[0], X[0], Gamme, Delta)
+
+def Affine(X, Y, Alpha, Beta, Gamma, Delta)
+  [I:   Alpha * (X[I] or 0)
+      + Beta  * (Y[I] or 0)
+      + (Gamma if I == 0 else 0)
+    for I in Union(Indicies(X), Indicies(Y))]
+
+def Union(A, B):
+  # This operation is Opaque
+  RangeToAAF(Range::Union(ToRange(A), ToRange(B)))
+  
+def Negation(A):
+  [I: -S for (I, S) in A]
+
+def BitManip(A..B):
+  # This operation is Opaque
+  RangeToAAF(Range::Union(ToRange(A), ToRange(B)))
+
+def ToRange(A):
+  (A[0] - Rad(A))..(A[0] + Rad(A))
+
+def NoInformation:
+  pass
+
+\end{minted}
+  \cprotect\caption{An outline of the different AA procedures, this explains how each constraint operation for the \verb+Visit+-function should be evaluated if you want to use the AA method.}
+\label{fig:AaInference}
+\end{figure}
+
+The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results.
 
 \begin{figure}
 \begin{minted}[linenos]{python}
@@ -245,11 +339,11 @@ Known = ExtractKnownWordlengths(Variables, AST)
 for _ in Equations:
   KnownAtStart = Known
   for (Var, Body) in Equations:
-    MaybeValue = case InferMethod of
+    MaybeRange = case InferMethod of
                   IA -> EvaluateUsingIa(Known, Body)
                   AA -> EvaluateUsingAa(Known, Body)
-    match MaybeValue:
-      Just Value -> InjectAndCheckForContradictions(Value, Known)
+    match MaybeRange:
+      Just Range -> InjectAndCheckForContradictions(Range, Known)
       Nothing -> pass
   # If we did not progress we abort
   if KnownAtStart == Known:
@@ -263,6 +357,8 @@ for Var in Variables:
 \end{figure}
 
 The algorithm from Figure \ref{fig:WLIAlgo} has a runtime of $O(n^2*d)$ where $n$ is the number of equations and $d$ is the largest depth of the equations -- since we are bounded by running the loop a maximum of $n$ times. Though average runtime is significantly better since it can solve most sets of equations efficiently in fewer iterations. If the algorithm can make progress we also know that it will, since it evaluates all equations for each pass -- this is a form of breath first search since we constantly re-check the equations and disallow variables to shrink in size we always find more information with each iteration.
+
+Evaluation of the body of the constraint equation using the functions \verb+EvaluateUsingIa+ and \verb+EvaluateUsingAa+ from Figure \ref{fig:WLIAlgo} returned ranges, this discarded information when using AA since the reduction from AA to range is lossy. The evaluation of the built up equation was implemented by simply replacing the variables with values when the variables were known, slowly withering away at the problem. This reduction to ranges causes variables to be obtuse to the wordlength inference.
 
 The inference algorithm from Figure \ref{fig:WLIAlgo} can be applied from the constraints gathered from the algorhtm in Figure \ref{fig:AstWalker}. This means we've visited the entire AST, picking out the expressions that are typed to be \verb+int<_>+ and construct algebraic constraints on the form \verb+<var> = <expression>+. We can then feed these equations into a solver and use them to solve more equations -- here we can pick between using using IA or AA. In the implementation this could be set when running the compiler \cprotect\footnote{The different wordlenght inference options could be swapped using the environment variable \verb+SPADE_INFER_METHOD+, the inference logic could also be disabled entirely, this was required since the Swim buildsystem is very peculiar about the flags passed to the compiler.}. We can then enrich the typecheckers types with our new findings which lets us reuse the rest of the compiler tool chain -- very nifty!
 
@@ -388,7 +484,7 @@ SB_WARMBOOT: 0/1       (0.0%)
 All builds produced the same metrics and is presented in Figure \ref{fig:SMDoutput}. The metrics shows no difference for any of the 153 place and route compilation of the spade-library. All of the compilations used 190 LUTs. 
 
 \subsubsection{A Simple FIR-filter}
-FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build. The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}.
+FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build\cprotect\footnote{The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}}.
 
 \begin{figure}
 \begin{center}
