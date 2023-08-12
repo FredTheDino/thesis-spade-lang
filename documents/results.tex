@@ -262,7 +262,7 @@ def NoInformation:
 \label{fig:IaInference}
 \end{figure}
 
-The IA method has is defined to do the following rudimentary operations from Figure \ref{fig:IaInference} when we try to evaluate the constraint, if any variable is unknown we simply abort trying to evaluate the constraint and hope we get more information somewhere else.
+The IA method has is defined to do the following rudimentary operations from Figure \ref{fig:IaInference} when we try to evaluate the constraint, if any variable is unknown we simply abort trying to evaluate the constraint and hope we get more information somewhere else. The \verb+Addition+ and \verb+Negation+ operations can be reversed trivially. The multiplication operation however, cannot be reversed -- consider the example of \verb!(1..2) * (-3..1) = (-6..2) = (2..2) * (-3..1)!.
 
 \begin{figure}
 \begin{minted}[linenos]{python}
@@ -323,7 +323,7 @@ def NoInformation:
 \label{fig:AaInference}
 \end{figure}
 
-The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results.
+The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results. Some of the operations are ill-defined and as a fallback the corresponding range operations are used -- for example the \verb+Union+ and \verb+BitManip+. The \verb+Multiplication+-operation is also quite complex and are partially opaque. It is also clear that some operations cannot be undone since they discard information.
 
 \begin{figure}
 \begin{minted}[linenos]{python}

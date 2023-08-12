@@ -11,10 +11,53 @@ Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL
 \cite{src:spadeSomething} \cite{src:spadeAnHDL}
 
 \subsection{Swim}
-The Spade-language has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
+The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
 \subsection{Spade syntax}
-\todo{Generics and simple functions}
+All programming languages have some kind of syntax -- and Spade has taken a lot of inspiration from Rust in this domain but make additions and tweaks due to the different domain of the language. This section contains a short version of the relevant Spade syntax, there is more to the Spade-language but a some short snippets are explained here.
+
+Spade has multiple novel constructs there are: entitites which can hold state while doing operations (think stateful functions to get an overview), pipelines that allow computations to stretch over multiple cycles and functions which are very much like functions in your favorite programming language. This guide will focus mostly on functions as a language construct since they are very well documented and most people who have written code has used something similar.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn identity(x: int<5>) -> int<5> {
+  x
+}
+\end{minted}
+  \caption{The definition of a function which does nothing with its argument.}
+  \label{fig:SpadeExample1}
+\end{figure}
+
+The code in Figure \ref{fig:SpadeExample1} show a simple definition of a function which directly returns the argument passed to it. The function is defined by the \verb+fn+-keyword similar to Rust. Just like Rust the type of the argument comes after its name, to the joy of the type theorists. The \verb+int+ type -- which means integer and is the main focus of this work -- takes a type argument that is passed inside of the angle-brackets (\verb+<>+). The argument passed to the \verb+int+-type is its wordlength, how many bits the integer fills up. A stark contrast to languages like C where you usually only have options that are powers of two. If the last statement in a function is an expression, it is automatically returned, again borrowed from Rust.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn calculate(x: int<5>) -> int<7> {
+  let partial_result: int<3> = some_function(3);
+  x + 1 * 2 - partial_result
+}
+\end{minted}
+  \caption{Some mathematical operations that }
+  \label{fig:SpadeExampleOps}
+\end{figure}
+
+Simple operations like multiplication, subtraction and addition exist are expressed as one would expect as shown in Figure \ref{fig:SpadeExampleOps}. Functions and entities can be called with parenthesis and any Rust-user should feel right at home. Statements are separated by semicolons.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn generics<#A, #B, T>(x: int<A>, t: T) -> int<B> {
+  if t == t {
+    x + x
+  } else {
+    0
+  }
+}
+\end{minted}
+  \caption{An if-expression and some generic arguments passed to a function.}
+  \label{fig:SpadeExample2}
+\end{figure}
+
+Spade has generics, which are bound to functions the function \verb+generics+ that is defined in Figure \ref{fig:SpadeExample2}. There are two different kinds of generics, those that have a \verb+#+-sign before them and those that done. The \verb+#+ indicate a compile time integer, and are used to aid the compiler with inferring the wordlength of expressions between functions. The remaining generics are type variables which can be either compile time integers or any kind of type. There are also if-expressions in the language that allow branching, these use the same implicit returns as the function bodies.
 
 \subsection{The Spade Typechecker}
 \todo{Mention ConstraintExpr and Requirements and how constraints are discarded. BitsToRepresent}
