@@ -289,16 +289,19 @@ def Addition(A, B):
 def Multiplication(X, Y):
   # This step introduces a new noise variable
   P = RangeToAAF(Range::Multiplication(X[0]..X[0], Y[0]..Y[0]))
-  Gamma = -P[0]
-  Delta = (Rad(X) * Rad(Y)) + Rad(P);
-  # The swapped order of Y and X is not a mistake
-  Affine(X, Y, Y[0], X[0], Gamme, Delta)
+  Gamma = 
+  Delta = 
+  # The swapped order of Y[0] and X[0] is not a mistake
+  Affine(X, Y, Y[0], X[0], -P[0], (Rad(X) * Rad(Y)) + Rad(P))
 
 def Affine(X, Y, Alpha, Beta, Gamma, Delta)
-  [I:   Alpha * (X[I] or 0)
-      + Beta  * (Y[I] or 0)
-      + (Gamma if I == 0 else 0)
-    for I in Union(Indicies(X), Indicies(Y))]
+  Z = [I:   Alpha * (X[I] or 0)
+          + Beta  * (Y[I] or 0)
+          + (Gamma if I == 0 else 0)
+        for I in Union(Indicies(X), Indicies(Y))]
+  U = NewUniqueIndex()
+  Z[U] = Delta
+  Z
 
 def Union(A, B):
   # This operation is Opaque
