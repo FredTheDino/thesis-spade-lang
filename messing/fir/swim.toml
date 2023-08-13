@@ -1,18 +1,20 @@
 compiler = { path = "/home/ed/Code/thesis-spade-lang/spade/" }
 
-[synthesis]
-top = "top"
-extra_verilog = [ "src/top.v" ]
-command = "synth_ecp5"
-
 [board]
 name = "ecpix-5"
 pin_file = "ecpix5.lpf"
 config_file = "openocd-ecpix5.cfg"
 
+[synthesis]
+command = "synth_ecp5"
+top = "main"
+extra_verilog = [
+    "src/top.v"
+]
+
 [pnr]
-architecture = "ice40"
-device = "iCE40UP5K"
-pin_file = "s1.pcf"
-package = "uwg30"
-allow_unconstrained = true
+architecture = "ecp5"
+device = "LFE5U-85F"
+pin_file = "ulx3s_v20.lpf"
+package = "CABGA381"
+allow_unconstrained=true
