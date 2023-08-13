@@ -27,4 +27,6 @@ Maybe it could be possible to pair the Spade-language with more complex formal v
 
 This work has added a separate wordlength inference module in addition to the typechecking, but it might still be very beneficial if they are one and the same -- and thus looking into more complex type systems or reworking the current typesystem might still be a good idea, this is another way to make functioncalls less opaque.
 
+The level of improvement that is gained by this improved wordlength inference might be overshadowed by the work of the PNR tools -- as such it might be the case that we alleviate a bit of PNR work with more improved wordlength inference, this might lead to better compile times. Investigating the relationship between compiletimes and these kinds of optimizations might be very interesting.
+
 As a personal note, I'd find it very interesting to add an interpreter to the Spade-language such that designs could be simulated without the need of an FPGA, this could also aid different kind of verification and might be an alternative to a more powerful typesystem.

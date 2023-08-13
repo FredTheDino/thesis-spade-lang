@@ -323,7 +323,7 @@ def NoInformation:
 \label{fig:AaInference}
 \end{figure}
 
-The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results. Some of the operations are ill-defined and as a fallback the corresponding range operations are used -- for example the \verb+Union+ and \verb+BitManip+. The \verb+Multiplication+-operation is also quite complex and are partially opaque. It is also clear that some operations cannot be undone since they discard information.
+The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results. Some of the operations are ill-defined and as a fallback the corresponding range operations are used -- for example the \verb+Union+ and \verb+BitManip+. The \verb+Multiplication+-operation is also quite complex and are partially opaque. It is also clear that some operations cannot be undone since they discard information. The AA-form that is used for the AA method was implemented using BigRational, this means that arbitrary precision floating point numbers can be stored. 
 
 \begin{figure}
 \begin{minted}[linenos]{python}
@@ -485,44 +485,57 @@ SB_WARMBOOT: 0/1       (0.0%)
 All builds produced the same metrics and is presented in Figure \ref{fig:SMDoutput}. The metrics shows no difference for any of the 153 place and route compilation of the spade-library. All of the compilations used 190 LUTs. 
 
 \subsubsection{A Simple FIR-filter}
-FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 100 elements was setup. The code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build\cprotect\footnote{The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}}.
+FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 40 elements was setup. The code was PNRd 51 times for each of the three configurations AA, IA and AAIA with \verb+swim clean+ ran between each build\cprotect\footnote{The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}}. This setup used the FPGA LFE5U-85F of the architecture ''ecp5'' as target and slightly different nextpnr and yosym versions\cprotect\footnote{The nextpnr version was: \verb+"nextpnr-ecp5" -- Next Generation Place and Route (Version nextpnr-0.6-30-g679b662a)+. The yosym version was: \verb!Yosys 0.32+46 (git sha1 008b725c1, clang 10.0.0-4ubuntu1 -fPIC -Os)!}
 
 \begin{figure}
 \begin{center}
 \begin{minted}[]{text}
-ICESTORM_DSP: 0/8    (0.0%)
-ICESTORM_HFOSC: 0/1  (0.0%)
-ICESTORM_LC: 2/5280  (0.0%)
-ICESTORM_LFOSC: 0/1  (0.0%)
-ICESTORM_PLL: 0/1    (0.0%)
-ICESTORM_RAM: 0/30   (0.0%)
-ICESTORM_SPRAM: 0/4  (0.0%)
-IO_I3C: 0/2          (0.0%)
-SB_GB: 0/8           (0.0%)
-SB_I2C: 0/2          (0.0%)
-SB_IO: 13/96        (13.5%)
-SB_LEDDA_IP: 0/1     (0.0%)
-SB_RGBA_DRV: 0/1     (0.0%)
-SB_SPI: 0/2          (0.0%)
-SB_WARMBOOT: 0/1     (0.0%)
+ALU54B: 0/78              (0.0%)
+CLKDIVF: 0/4              (0.0%)
+DCCA: 0/56                (0.0%)
+DCSC: 0/2                 (0.0%)
+DCUA: 0/2                 (0.0%)
+DDRDLL: 0/4               (0.0%)
+DLLDELD: 0/8              (0.0%)
+DP16KD: 0/208             (0.0%)
+DQSBUFM: 0/14             (0.0%)
+DTR: 0/1                  (0.0%)
+ECLKBRIDGECS: 0/2         (0.0%)
+ECLKSYNCB: 0/10           (0.0%)
+EHXPLLL: 0/4              (0.0%)
+EXTREFB: 0/2              (0.0%)
+GSR: 0/1                  (0.0%)
+IOLOGIC: 0/224            (0.0%)
+JTAGG: 0/1                (0.0%)
+MULT18X18D: 40/156       (25.6%)
+OSCG: 0/1                 (0.0%)
+PCSCLKDIV: 0/2            (0.0%)
+SEDGA: 0/1                (0.0%)
+SIOLOGIC: 0/141           (0.0%)
+TRELLIS_COMB: 2255/83640  (2.7%)
+TRELLIS_ECLKBUF: 0/8      (0.0%)
+TRELLIS_FF: 0/83640       (0.0%)
+TRELLIS_IO: 342/365      (93.7%)
+TRELLIS_RAMW: 0/10455     (0.0%)
+USRMCLK: 0/1              (0.0%)
 \end{minted}
 \end{center}
 
-  \caption{The output from every place and route run given regardless of wordlength inference method for the simple FIR-filter.}
+  \cprotect\caption{The output from every place and route run given regardless of wordlength inference method for the simple FIR-filter. The lines of most interest are \verb+TRELLIS_COMB+, which is the number of LUTs and \verb+MULT18X18D+ which is the number of multiplication circuits -- which is equal to the number of multiplications in the filter so we know it has not been optimized out.}
   \label{fig:FIRoutput}
 \end{figure}
 
 \begin{figure}
 \begin{itemize}
-  \item IA: \verb+int<0..1000000>+
-  \item AA: \verb+int<-500000..1000000>+
-  \item AAIA: \verb+int<0..1000000>+
+  \item IA: \verb+int<0..400000>+
+  \item AA: \verb+int<-200000..400000>+
+  \item AAIA: \verb+int<0..400000>+
 \end{itemize}
   \caption{The return types for the fir-filter test program where the wordlength inference method was varied.}
   \label{figRangeRes}
 \end{figure}
 
-The Figure \ref{fig:FIRoutput} shows the output from every PNR run for the FIR-filter program. All the outputs were identical regardless of what wordlength inference method was used. It is also worth noting that for IA and AAIA the return type of the \verb+fir+-function can be simplified to \verb+int<0..1000000>+. The return type is required to be \verb+int<-500000..1000000>+ for AA which goes into the negative even though it cannot possibly happen. The returned ranges are shown in Figure \ref{figRangeRes}.
+The Figure \ref{fig:FIRoutput} shows the output from every PNR run for the FIR-filter program. All the outputs were identical regardless of what wordlength inference method was used. It is also worth noting that for IA and AAIA the return type of the \verb+fir+-function can be simplified to \verb+int<0..400000>+. The return type is required to be \verb+int<-200000..400000>+ for AA which goes into the negative even though it cannot possibly happen. The returned ranges are shown in Figure \ref{figRangeRes}.
 
 \subsubsection{Comparing the Ranges For Simple Expressions}
 The wordlength inference was also compared on 3 expressions: $a - a + a - a + a - a$, $(a - b) \cdot (b - a)$ and $a \cdot a \cdot b \cdot b \cdot c \cdot c$, for all of the 3 methods AA, IA and AAIA. All arguments had a wordlength of $5$ and of the range $0..100$ the resulting range was noted in the table in Figure \ref{fig:CompareThings}.
