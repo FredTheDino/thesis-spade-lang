@@ -1139,7 +1139,7 @@ refer to its www home page:
   % {\addcontentsline{toc}{chapter}{Acknowledgments}}
   \cleardoublepage
   {\pagestyle{plain}\tableofcontents\relax\cleardoublepage}
-  \iftotalfigures {\pagestyle{plain}\listoffigures\relax\cleardoublepage}\fi
+  % \iftotalfigures {\pagestyle{plain}\listoffigures\relax\cleardoublepage}\fi
   \iftotaltables {\pagestyle{plain}\listoftables\relax\cleardoublepage}\fi
   \ifdef{\listoftodos}{\ifdefempty{\listoftodos}{}{\pagestyle{plain}\listoftodos\relax\cleardoublepage}}{}
   \ifprinterfriendly

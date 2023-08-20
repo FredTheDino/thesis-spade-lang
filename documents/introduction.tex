@@ -2,7 +2,7 @@
 \label{chaIntro}
 Computers are the working horse of the digital age -- the usefulness of computers in data processing cannot be overstated. A computer is of course a very general term and referred to an occupation in the times before digital computers \cite{src:ComputerOccupation}. Being able to do computations fast is important. One way to do computations very fast is to make dedicated hardware for them. Dedicated hardware can run fast, requires little power but is expensive to produce single circuits. There is however an alternative, FPGAs (Field Programmable Gate Arrays). An FPGA is a piece of dedicated hardware that can be programmed and is today used a lot in the military and for prototyping hardware. FPGAs are programmed very differently from ''traditional computers'' and there are a multitude of programming languages for this domain -- these languages are called HDLs (Hardware Description Language). One of these HDLs is Spade -- the topic of this thesis.
 
-The Spade HDL focuses on usability and borrows much from the modern programming language \cite{src:spadeSomething} \cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer than other alternatives like VHDL and SystemVerilog.
+The Spade HDL focuses on usability and borrows much from modern programming language\cite{src:spadeSomething}\cite{src:spadeAnHDL}. By writing high level code when describing hardware, we also open the door for optimizations and help from the compiler. This is the topic of this master thesis, a specific kind of optimization and user-help that can make Spade faster and safer than other alternatives like VHDL and SystemVerilog.
 
 This thesis focuses specifically on wordlength inference. Using a novel approach of combining wordlength inference with type inference. Wordlength is the number of bits to allocate to a value and when creating hardware you often have to specify this yourself. Getting this wordlength right everywhere can be tedious and time consuming. A small error in the wordlength might cause faults in the program and a too large wordlength wastes resources.
 Since the compiler has access to all the source code for the hardware, the compiler should be able to check the wordlengths everywhere and potentially optimize the wordlength where bits go unused. Putting these optimizations in the compiler allows code to be more general which aids reuse, a good practice in the modern software industry. 
@@ -13,9 +13,11 @@ To tackle the problem of wordlength inference we need mathematical tools to appr
 Creating more powerful tools allows us to do more powerful things with them. In the case of software this effect is even larger, anyone with a laptop and a dream can develop programs for anyone to use. One of these fundamental tools is the compiler and programming languages -- no one in their right mind would use FORTRAN today when they have alternatives like Go, Rust or Python. Bringing this mindset to the hardware world could increase the productivity, usability and accessibility to custom circuits and accelerators. HDLs have the huge potential of improving all computation speeds in the world. It is debatable if this thesis alone will take us as far as to revolutionize the hardware industry, but it is certainly a step in the right direction for energy-efficient and faster computations.
 
 \section{Research questions}
+The topic of wordlength inference is vague and large, to further narrow it down 3 research questions have been decided upon. These questions aim to give the research focus and direction.
+
 \begin{enumerate}
   \item How can interval arithmetic and affine arithmetic be used to implement wordlength inference?
-  \item How does wordlength inference and optimization affect the number of LUTs, DPS-blocks and memories for a circuit?
+  \item How does wordlength inference and optimization affect the number of LUTs?
   \item Can wordlength inference be used to create more reusable code?
 \end{enumerate}
 

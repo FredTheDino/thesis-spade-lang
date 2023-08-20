@@ -1,156 +1,13 @@
 \chapter{Background}
 \label{chaBackground}
-This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book on the subject. Typechecking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
+This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book (\cite{src:DragonBook}\cite{src:CraftingInterp}) on the subject. Typechecking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
 
-% Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmars even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
+% Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
 % 
 % Wordlengths, HDLs and also get a section describing how they fit into this work.
 
-\section{Spade}
-Spade is a HDL taking a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesized -- creating a faster iteration loop.
-\cite{src:spadeSomething} \cite{src:spadeAnHDL}
-
-\subsection{Swim}
-The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
-
-\subsection{Spade syntax}
-All programming languages have some kind of syntax -- and Spade has taken a lot of inspiration from Rust in this domain but make additions and tweaks due to the different domain of the language. This section contains a short version of the relevant Spade syntax, there is more to the Spade-language but a some short snippets are explained here.
-
-Spade has multiple novel constructs there are: entitites which can hold state while doing operations (think stateful functions to get an overview), pipelines that allow computations to stretch over multiple cycles and functions which are very much like functions in your favorite programming language. This guide will focus mostly on functions as a language construct since they are very well documented and most people who have written code has used something similar.
-
-\begin{figure}
-\begin{minted}[linenos]{rust}
-fn identity(x: int<5>) -> int<5> {
-  x
-}
-\end{minted}
-  \caption{The definition of a function which does nothing with its argument.}
-  \label{fig:SpadeExample1}
-\end{figure}
-
-The code in Figure \ref{fig:SpadeExample1} show a simple definition of a function which directly returns the argument passed to it. The function is defined by the \verb+fn+-keyword similar to Rust. Just like Rust the type of the argument comes after its name, to the joy of the type theorists. The \verb+int+ type -- which means integer and is the main focus of this work -- takes a type argument that is passed inside of the angle-brackets (\verb+<>+). The argument passed to the \verb+int+-type is its wordlength, how many bits the integer fills up. A stark contrast to languages like C where you usually only have options that are powers of two. If the last statement in a function is an expression, it is automatically returned, again borrowed from Rust.
-
-\begin{figure}
-\begin{minted}[linenos]{rust}
-fn calculate(x: int<5>) -> int<7> {
-  let partial_result: int<3> = some_function(3);
-  x + 1 * 2 - partial_result
-}
-\end{minted}
-  \caption{Some mathematical operations that }
-  \label{fig:SpadeExampleOps}
-\end{figure}
-
-Simple operations like multiplication, subtraction and addition exist are expressed as one would expect as shown in Figure \ref{fig:SpadeExampleOps}. Functions and entities can be called with parenthesis and any Rust-user should feel right at home. Statements are separated by semicolons.
-
-\begin{figure}
-\begin{minted}[linenos]{rust}
-fn generics<#A, #B, T>(x: int<A>, t: T) -> int<B> {
-  if t == t {
-    x + x
-  } else {
-    0
-  }
-}
-\end{minted}
-  \caption{An if-expression and some generic arguments passed to a function.}
-  \label{fig:SpadeExample2}
-\end{figure}
-
-Spade has generics, which are bound to functions the function \verb+generics+ that is defined in Figure \ref{fig:SpadeExample2}. There are two different kinds of generics, those that have a \verb+#+-sign before them and those that done. The \verb+#+ indicate a compile time integer, and are used to aid the compiler with inferring the wordlength of expressions between functions. The remaining generics are type variables which can be either compile time integers or any kind of type. There are also if-expressions in the language that allow branching, these use the same implicit returns as the function bodies.
-
-There are more language constructs in Spade, but these constructs are deemed irrelevant for this work. To not have to write an entire reference for the Spade-language here.
-
-\subsection{The Spade Typechecker}
-\label{sec:TheSpadeTypechecker}
-Since Spade is a statically typed language the compiler has a typechecker. The Spade typechecker is a variant of Damas-Hindley-Milner and the intricacies of this class of type system is discussed in Section \ref{sec:TypeChecking} which discusses typechecking more broadly while this section mentions the specifics of the implementation in the Spade compiler before any changes were made.
-
-The Spade typechecker walks through he syntax tree of the program applying rules to each node, unifying (Section \ref{sec:Unification}) types which have to be equal for the program to be valid. Each expression in Spade has a corresponding typevariable which holds the type of the expression. These typevariables can also contain type variables inside them, so types with generics are encoded with their generic arguments. The implementation looks a bit like: \verb+TypeVar(Id, Vec<TypeVar>)+, this is a bit simplified but the details are enough to understand the rest of this work. The unification of the outer type variable would also cause the inner type variables to be unified.
-
-Besides type variables there are constraints and requirements -- they do different things so the synonyms make them a bit confusing to talk about. \verb+Requirement+ is the least relevant, and handles methods and fields that are ''required'' to exist on types, but also that a certain typevariable has to hold an integer of a certain value. After a \verb+Requirement+ is satisfied the affected type variables are updated and the \verb+Requirement+ is discarded.
-
-There are also \verb+ConstraintExpr+, which are used and referenced a lot more in this work. \verb+ConstraintExpr+ handle compile time integers and have functionality for adding (\verb+Sum+), subtracting (\verb+Sub+), variables (\verb+Var+), constants (\verb+Integer+) and taking the logarithm with base 2 (\verb+BitsToRepresent+) -- the logarithm operation is used to find the number of bits a value needs to be represented. These constraints are solved in a similar way to the constraints, are removed when they are satisfied and relevant typevariables are then updated. The \verb+ConstraintExpr+ lack syntax and cannot be expressed outside of the typechecker.
-
-\subsection{Wordlength Inference in Spade}
-\label{sec:TheProblem}
-Most values in Spade take up bits or space in the run time environment. Wordlength inference is mostly concerned with numbers -- so consider positive numbers without a decimal. Consider a program with a counter that resets to 0 after counting to 3, we do not need 32 bits to represent it. The cost of storing a number with 32 bits compared to 2 bits could be large if it requires a larger FPGA, extra circuit components or a different power rating. Compared to software engineering of programs for general purpose computers where memory is considered abundant, FPGAs are limited in memory and computations use parts of the FPGA (which isn't possible on a processor using fixed width numbers) which causes HDLs to be designed differently to a general purpose programming languages.
-
-Wordlength inference is the compiler understanding what wordlength -- the number of bits -- is needed to store a value. Inferring this value well causes good resource usage and requires less manual intervention. Doing it poorly or not at all either requires users to manually specify the wordlength of each value, or hardware that is inefficient.
-
-In Spade integer types are written using the \verb|int| keyword, and wordlength is specified by passing a generic to the integer type. \verb|int<3>| specifies an integer that spans 3 bits and holds values between $-(2^2) = -4$ and $2^2 - 1 = 3$. Spade also infers wordlengths based on the number of additons and multiplications -- so one addition adds one extra bit of required precision while a multiplication adds the wordlengths together. This approach means that equivalent expressions require different wordlengths depending on the number of additions and multiplications used to express it. 
-
-\begin{figure}
-\centering
-\begin{minted}[linenos]{rust}
-fn f(a: int<3>) -> int<4> {
-  a + 1 + 1
-}
-
-entity main(clk: clock, rst: bool) -> int<4> {
-  f(3)
-}
-\end{minted}
-\caption{A simple spade program that does not compile, showing the current limitations of wordlength inference.}
-\label{figSimpleFaultSpade}
-\end{figure}
-
-\begin{figure}
-\centering
-  \begin{minted}[]{text}
-error: Type error
-  |- src/simple\_fault.spade:1:27
-  |
-1 |   fn f(a: int<3>) -> int<4> {
-  |                      ------ int<4> type specified here
-  | |---------------------------^
-2 | |   a + 1 + 1
-3 | | }
-  | |-^ Found type int<5>
-  |
-  = Expected: 4
-  =       in: int<4>
-  =      Got: 5
-  =       in: int<5>
-
-Error: aborting due to previous error
-\end{minted}
-\caption{The output from the compiler when trying to compile the program in Figure \ref{figSimpleFaultSpade}}
-\label{figSimpleFaultSpadeCompileOutput}
-\end{figure}
-
-Consider the program in Figure \ref{figSimpleFaultSpade}. The function \textit{f} adds 3 values together, two of which are known constants. We also know that $2^2 + 2 < 2^3$ -- we should be able to fit the result of the addition into the 4 bit word without loss of data. The compiler does not agree as seen in the compiler output in Figure \ref{figSimpleFaultSpadeCompileOutput} where it claims we need 5 bits to store this value. This problem might seem inconsequential since calculating constant expressions during compilation would fix this, as seen by the program in Figure \ref{figSimpleCorrectSpade} compiling without worries. Adding constants is only the top of the iceberg that is this problem. The problem here is much deeper, and is a direct cause of the implementation of typechecking and wordlength inference directly.
-
-\begin{figure}
-\centering
-  \begin{minted}[linenos]{rust}
-fn f(a: int<3>) -> int<4> {
-  a + 2
-}
-
-entity main(clk: clock, rst: bool) -> int<4> {
-  f(3)
-}
-\end{minted}
-  \caption{``simple\_correct.spade`` A spade program that does compile and is equivalent to the program in Figure \ref{figSimpleFaultSpade}}
-\label{figSimpleCorrectSpade}
-\end{figure}
-
-The Spade compiler implements a Damas-Hindley–Milner typechecker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{figSimpleFaultSpade} and \ref{figSimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself.
-
-\subsection{HIR-lowering}
-Since the level of abstraction between Spade and Spades compile target is so different. Translating between these abstraction levels is quite complex, and is done in steps. The first step in this chain is called \verb+HIR-lowering+, HIR stands for ''Higher Intermediate Representation'' and is the first of these steps, the later steps are not as relevant to the typechecking but are very interesting when compiling. The HIR has been typechecked and monomorphised (Section \ref{sec:Monomorphisation}).
-
-\subsection{Rust}
-Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler and snippets of Rust-code are shown in this work. \cite{src:Rust}
-
-\subsubsection{BigInt}
-Since Spade can express large wordlengths the maximum values cannot always be expressed in smaller sized integers. A solution to this is to use what is called ''BigInt'', it is an integer which has arbitrary precision. This means that really large numbers can be represented. This representation is very slow compared to ''normal'' integers and the size of these BigInts can grow unbounded.
-
-\subsubsection{BigRational}
-Besides BigInt one can define a real number with arbitrary precision, this is trivial if you have a BigInt since all rational numbers can be expressed as a ratio between two integers. This representation is also very slow compared to ''normal'' floats and the size of these BigRationals can grow unbounded. 
-
 \section{Introduction to Compiler Structure}
-What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable X86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
+What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable x86 machine code where X86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
 
 Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing the compiler often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform syntactic analysis -- also known as parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree (AST). Though some compilers interweave these steps, they are usually there in spirit.
 
@@ -201,7 +58,18 @@ General purpose programming languages need to be recursive in their structure --
 \end{figure}
 For example, consider the grammar for integer addition expressions described in grammar shown in Figure \ref{fig:bnfExpr}. The syntax understands whole numbers from 1 to 3 and the basic arithmetic operation addition (\verb!+!). Most notable is that the syntax is recursive and expressions can contain expressions in themselves. This BNF-like syntax is a bit simplified and the grammar is not necessarily in a good format. A better grammar would handle order of operations and avoid ambiguities -- which will be explained later.
 
-The basic idea of the BNF is that we can expand each node -- and all expansions are valid ''programs'' in the language. Here valid means syntactically correct -- it does not mean the ideas expressed in the ''program'' are meaningful in any way. The rules expressed in the BNF say that an \verb|<expr>| might be replaced with either \verb|<num>| or \verb|<expr> + <expr>| And that a \verb|<num>| can be replaced with \verb|1| or \verb|2| or \verb|3|. All valid programs are \verb|<expr>| we can start expanding from there -- the simplest program might be \verb|1| since we can get this from expanding \verb|<expr> -> <num> -> 1|. But we could also do the expansions \verb|<expr> -> <expr> + <expr> -> <expr> + <expr> + <expr> -> <expr> + <expr> + <num> -> <expr> + <expr> + 1 -> <expr> + <num> + 1 -> <expr> + 2 + 1 -> <num> + 2 + 1 -> 3 + 2 + 1|. These expansions can get quite repetitive so special notation is often used to abbreviate. This syntax is also so simple that the format expressed here is needlessly powerful. But the important detail here is that we do not know if we expand the left-most \verb|<expr>| or the right more \verb|<expr>| when we apply the rule \verb|<expr> ::= <expr> + <expr>|. To learn more we recommend any book on theoretical computer science. 
+The basic idea of the BNF is that we can expand each node -- and all expansions are valid ''programs'' in the language. Here valid means syntactically correct -- it does not mean the ideas expressed in the ''program'' are meaningful in any way. The rules expressed in the BNF say that an \verb|<expr>| might be replaced with either \verb|<num>| or \verb|<expr> + <expr>| And that a \verb|<num>| can be replaced with \verb|1| or \verb|2| or \verb|3|. All valid programs are \verb|<expr>| we can start expanding from there -- the simplest program might be \verb|1| since we can get this from expanding \verb|<expr> -> <num> -> 1|. But we could also do the expansions:
+\begin{verbatim}
+  <expr> -> <expr> + <expr>
+         -> <expr> + <expr> + <expr>
+         -> <expr> + <expr> + <num>
+         -> <expr> + <expr> + 1
+         -> <expr> + <num> + 1
+         -> <expr> + 2 + 1
+         -> <num> + 2 + 1
+         -> 3 + 2 + 1
+\end{verbatim}
+These expansions can get quite repetitive so special notation is often used to abbreviate. This syntax is also so simple that the format expressed here is needlessly powerful. But the important detail here is that we do not know if we expand the left-most \verb|<expr>| or the right more \verb|<expr>| when we apply the rule \verb|<expr> ::= <expr> + <expr>|. To learn more we recommend any book on automatas or parsers. 
 
 We can write a simple ''program'' that is a part of the language described by Figure \ref{fig:bnfExpr}. Some small valid ''programs'' are: \verb!1!, and \verb!1 + 1!. But we will focus on the expression \verb!1 + 2 + 3! -- which has two additions.
 
@@ -248,13 +116,13 @@ Looking at the expression \verb!1 + 2 + 3! it is obvious that the expressions sh
   \label{fig:astExpr}
 \end{figure}
 
-The Figure \ref{fig:astExpr} shows the two different associativities that causes \verb!1 + 2 + 3! to be interpreted as either \verb!(1 + (2 + 3))! or \verb!((1 + 2) + 3)!. There is not much difference between these mathematical expressions -- they are even considered equivalent since addition is associative for integers. The associativity property is unfortunately very rare in the real world of effectful-programming. If evaluating an expression in this language had side-effects -- for example printing the result, different associativities would cause different outputs. One of the programs would print \verb+1 2 3 3 6+ while the other would print \verb+1 2 3 5 6+ (ofcourse dependent on how the expressions are evaluated). This is what is called an ambiguity -- and an abstract syntax tree makes it clear how the compiler internally understands this addition.
+Figure \ref{fig:astExpr} shows the two different associativities that causes \verb!1 + 2 + 3! to be interpreted as either \verb!(1 + (2 + 3))! or \verb!((1 + 2) + 3)!. There is not much difference between these mathematical expressions -- they are even considered equivalent since addition is associative for integers. The associativity property is unfortunately very rare in the real world of effectful-programming. If evaluating an expression in this language had side-effects -- for example printing the result, different associativities would cause different outputs. One of the programs would print \verb+1 2 3 3 6+ while the other would print \verb+1 2 3 5 6+ (ofcourse dependent on how the expressions are evaluated). This is what is called an ambiguity -- and an abstract syntax tree makes it clear how the compiler internally understands this addition.
 
 Making additions have side-effects is not the only way to get non-associative additions, one could use a less well-behaved addition like that found in the IEEE floating point standard -- since any form of rounding is non-associative. Unfortunately infinite precision is quite rare when storage is finite.
 
 There are different operations which can be done to an abstract syntax tree. In our very simple example of integer additions it would make sense to fold the constants and replace the entire AST with the constant 6 -- but to do that we would have to know the associativity of the \verb!+!-operator.
 
-Because of its flexibility the AST is very a very popular format to output from the parsing stage. In the Spade-compiler the AST is annotated with type information as it is discovered -- this annotated AST is then feed either to a language server or a code generation phase.
+Because of its flexibility the AST is very a very popular format to output from the parsing stage. In the Spade-compiler the AST is annotated with type information as it is discovered -- this annotated AST is then either to a language server or a code generation phase.
 
 \section{Syntax and Semantics}
 There are two concepts when talking about language, syntax and semantics. Syntax is the structure of the language, how the words are placed next to each other and what makes a valid sentence. Programming languages also have a notion of sentences and validity, and the word for syntax applies there as well. Syntax can also be used to describe natural languages.
@@ -269,12 +137,13 @@ Type checking is a way of making sure the program is internally consistent -- th
 
 For details regarding the Spade typechecker, see Section \ref{sec:TheSpadeTypechecker} which discusses implementation details.
 
-The type checker in Spade is a Damas-Hindley-Milner typechecker \cite{src:DamasHindleyMilner}. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmar except the body of the function. \cite{src:DamasHindleyMilner}
+The type checker in Spade is a Damas-Hindley-Milner typechecker \cite{src:DamasHindleyMilner}. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker would be able to deduce that the argument could have any type, but that the type is the same as the return value, without any help from the programmer except the body of the function. \cite{src:DamasHindleyMilner}
 
 There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferer could be used to check the types of the program and can easily be modded into a typechecker. It is infact upon this idea that the Damas-Hindley-Milner typechecker works. In this work, we consider typechecking and typeinference the same operations -- since Spade implements typechecking using typeinference. This equivalence is not the same for all typecheckers, since some only check types without inferring.
 
 \subsection{Unification}
-A Damas-Hindley-Milner typechecker is a very simple typechecker and is based upon one simple idea: typeinference is a constraint satisfaction problem with \textit{only} equivalence-constraints. The idea of the typechecking and typeinference is to simply find types that has to be equal for the program to function. Most of these small rules are painfully simple -- like: ''adding two numbers gives you a number'', or ''calling a function results in a type with the return value of the called function''. What really drives these simple rules is a process called unification. Unification is a way to propagate these equality constraints. This is proven to be correct, given that all expressions without sub-expressions have a type.
+\label{sec:Unification}
+A Damas-Hindley-Milner typechecker is a very simple typechecker and is based upon one simple idea: typeinference is a constraint satisfaction problem with \textit{only} equivalence-constraints. The idea of the typechecking and typeinference is to simply find types that have to be equal for the program to function. Most of these small rules are painfully simple -- like: ''adding two numbers gives you a number'', or ''calling a function results in a type with the return value of the called function''. What really drives these simple rules is a process called unification. Unification is a way to propagate these equality constraints. This is proven to be correct, given that all expressions without sub-expressions have a type.
 
 This unification property is also found in logic-programming, which is not a coincidence but rather an effect of the Curry–Howard isomorphism. \cite{src:curryHowardIso}
 
@@ -342,11 +211,11 @@ fn main { add(add(1, 2), "abc") }
 \end{figure}
 
 
-Let us assume that we have two types in our language \verb+Int+ and \verb+Str+. We start by giving each construction a unique type variable. (The unique type variable is mainly to aid explanation. There are more resource efficient ways of implementing Damas-Hindley-Milner.) We then evaluate the syntax tree bottom up -- the syntax tree is shown in Figure \ref{fig:progUniTree}. We will also assume the rules: 
+Let us assume that we have two types in our language \verb+Int+ and \verb+Str+. We start by giving each construct a unique type variable. (The unique type variable is mainly to aid explanation. There are more resource efficient ways of implementing Damas-Hindley-Milner.) We then evaluate the syntax tree bottom up -- the syntax tree is shown in Figure \ref{fig:progUniTree}. We will also assume the rules: 
 \begin{enumerate}
   \item integer-constants have the type \verb+Int+
   \item String-constants have the type \verb+Str+
-  \item Calling a function means the types of the arguments and parameters are the same and the whole expressions evaluates to the return type of the function. Evaluating rule (3) always gives a new type ''A'', we will keep track of these with numbered suffixes.
+  \item Calling a function means the types of the arguments can be unified with the parameters and the whole expressions evaluates to the return type of the function. Evaluating rule (3) always gives a new type ''A'', we will keep track of these with numbered suffixes.
 \end{enumerate}
 These 3 simple rules let us typecheck and typeinfer the expression in the main-function.
 
@@ -355,13 +224,15 @@ In this explanation the \verb+:+ operator denotes that an expression on the left
 In conclusion, unification lets us define two types as the same type and send all this information as far as we want in a program -- there are programming languages with global type-inference for example. But the method described by Damas-Hindley-Milner is limited to equality-constraints which has some limitations in what types can be expressed.
 
 \subsection{Monomorphisation}
-\label{fig:Monomorphisation}
+\label{sec:Monomorphisation}
 After all the typechecking and typeinference has been done monmorphisation can take place. This phase turns generic functions into concrete function -- that is to say all functions with generics like \verb+fn add<A>(x: A, y: A) -> A+ are given concrete types like \verb+fn add(x: i32, y: i32) -> i32+. This means the same code can lead to multiple function bodies. Monomorphisation creates a new instance of a function for each of the generic arguments given, and Rust does something similar. \cite{src:rustMono}
 
-Monomorphisation is often considered a performance optimization, but for HDLs this step is absolutely required since the hardware does not handle function pointers or any kind of indirection. For it to be possible to pass around program code as a concept there would also need to be some kind of control flow structure -- the only control flow structure available on an FPGA is a mask. So modeling virtual methods from object oriented programming would need to be done using masks, this means the resource usage would grow with the number of implementations for a virtual method, since we cannot know at compile time which of these results is the right one (unless we use monomorphisation) -- the scaling of this solution negates all the benefits of virtual methods and is not a good fit for FPGA development where resources are scarce. 
+Monomorphisation is often considered a performance optimization, but for HDLs this step is absolutely required since the hardware does not handle function pointers or any kind of indirection. For it to be possible to pass around program code as a concept there would also need to be some kind of control flow structure. So modeling virtual methods from object oriented programming would need to be done using masks, this means the resource usage would grow with the number of implementations for a virtual method, since we cannot know at compile time which of these results is the right one (unless we use monomorphisation) -- the scaling of this solution negates all the benefits of virtual methods and is not a good fit for FPGA development where resources are scarce. 
 
 \subsection{The Lambda Cube}
-Typesystems are complex, and there are alot of them. But typesystems are also a very theoretical study, and comes from the idea of type theory. Type theory is a branch of mathematics that focuses on an reaching conclusions using types. A good place to start to understand at least parts of the field is to look at lambda calculus -- a kind of ''proramming language'' similar to a turing machine in that it is a mathematical construct for computation. Lambda calculus allows function definitions and from that natural numbers and boolean operations are constructed -- this is quite a deep field and is unfortunately not ultimately relevant to this work. But the lambda calculus is a very good playground for typesystems, since all computable computations can be reduced to an expression in lambda calculus and lambda calculas has functions and function calls as its only constructs.
+% NOTE[et]: I'm not sure how I feel about this section, I feel like this kind of information is too abstract to help people understand this work...
+\label{sec:lambdaCube}
+Typesystems are complex, and there are alot of them. But typesystems are also a very theoretical study, and comes from the idea of type theory. Type theory is a branch of mathematics that focuses on and reaching conclusions using types. A good place to start to understand at least parts of the field is to look at lambda calculus -- a kind of ''proramming language'' similar to a turing machine in that it is a mathematical construct for computation. Lambda calculus allows function definitions and from that natural numbers and boolean operations are constructed -- this is quite a deep field and is unfortunately not ultimately relevant to this work. But the lambda calculus is a very good playground for typesystems, since all computable computations can be reduced to an expression in lambda calculus and lambda calculas has functions and function calls as its only constructs.
 
 \begin{figure}
 \begin{center}
@@ -406,13 +277,192 @@ Typesystems are complex, and there are alot of them. But typesystems are also a 
 \end{center}
 \end{figure}
 
-When talking about typesystems for the lambda calculus you always limit the power of the language, but you can get some other niceities like bounded execution times. The lambda cube (as shown in Figure \ref{fig:lambdaCube}) is a way to categorize these different type systems in order of power. Each dimension of the cube is a different kind of feature for a typesystem. The bottom left of the lambda cube is the simply typed lambda calculus, where only terms working on terms is allows (this is usually called functions). $\rightarrow$ means there are types that can affect terms, known as dependent types and is considered by some quite esoteric but is mostly used in computer proof systems like Coq or Agda -- these languages express mathematical truths not necessarily usable programs though the feature allows for more computation power. $\nearrow$ signals types that act on other types, this is mostly considered a convince and does not increase the power but can increase the expressiveness one for example higher-kinded types in Haskell or PureScript. Finally there's $\uparrow$ which means terms that can affect types -- or polymorphism as it is known in C++ or Java. In a sense the lambda cube can be thought of as a map for typesystems and their complexities. The most powerful of these typesystems is the calculus of construction, and it has all these 3 typesystem features and it also has the most computational power of them all, meaning all of the other typesystems can be constructed by removing features for the calculus of construction.
+When talking about typesystems for the lambda calculus you always limit the power of the language, but you can get some other niceities like bounded execution times. The lambda cube (as shown in Figure \ref{fig:lambdaCube}) is a way to categorize these different type systems in order of power. Each dimension of the cube is a different kind of feature for a typesystem. The bottom left of the lambda cube is the simply typed lambda calculus, where only terms working on terms is allows (this is usually called functions). The arrows going in the $\rightarrow$-direction (not the same arrow as in $\lambda{}\hspace{-0.3em}\rightarrow$) mean there are types that can affect terms, known as dependent types and is considered by some quite esoteric but is mostly used in computer proof systems like Coq or Agda -- these languages express mathematical truths not necessarily usable programs though the feature allows for more computation power. The arrows in the $\nearrow$-direction signals types that act on other types, this is mostly considered a convince and does not increase the power but can increase the expressiveness one for example higher-kinded types in Haskell or PureScript. Finally there's arrows in the $\uparrow$-direction which means terms that can affect types -- or polymorphism as it is known in C++ or Java. In a sense the lambda cube can be thought of as a map for typesystems and their complexities. The most powerful of these typesystems is the calculus of construction, and it has all these 3 typesystem features and it also has the most computational power of them all, meaning all of the other typesystems can be constructed by removing features for the calculus of construction.
 
 Most typesystems for programming languages can be mapped to one of these theoretical type systems. Spade can be mapped to somewhere around $\lambda\omega$ since it has polymorphic functions and types that work on other types in the form of \verb+ConstraintExpr+ -- though it is not as general as something like the Haskell typesystem so one could argue that Spade has partial higher kinded types, which puts it between $\lambda\omega$ and $\lambda{}2$. Languages like Coq have all the bells and whistles of calculus of construction and is thus considered more complex. There is also things like Elm which falls somewhere between $\lambda{}2$ and $\lambda\omega$. This means Spade has a typesystem that is about as complex and powerful as that of Elm. So constructs that can be expressed in Elm should also be expressible in the Spade typesystem, this is a good sanity check for language features that one wishes to add. Wordlength inference could be mapped to a record where each field is an integer and the field is present if the integer falls in the available range, the functions for these computations could not be expressed inside the Elm language since it is deliberately locked down, but if one had access the compiler one could unlock the full power and easily write these functions, this should give some theoretical basis for the possibility of this work.
 
+\section{Spade}
+Spade is a HDL that takes a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static typechecking which allows programs to be verified before even being synthesized -- creating a faster iteration loop.
+\cite{src:spadeSomething} \cite{src:spadeAnHDL}
+
+\subsection{Swim}
+The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
+
+\subsection{Spade syntax}
+All programming languages have some kind of syntax -- and Spade has taken a lot of inspiration from Rust in this domain but make additions and tweaks due to the different domain of the language. This section contains a short version of the relevant Spade syntax, there is more to the Spade-language but some short snippets are explained here.
+
+Spade has multiple novel constructs there are: entities which can hold state while doing operations (think stateful functions to get an overview), pipelines that allow computations to stretch over multiple cycles and functions which are very much like functions in your favorite programming language. This guide will focus mostly on functions as a language construct since they are very well documented and most people who have written code has used something similar.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn identity(x: int<5>) -> int<5> {
+  x
+}
+\end{minted}
+  \caption{The definition of a function which does nothing with its argument.}
+  \label{fig:SpadeExample1}
+\end{figure}
+
+The code in Figure \ref{fig:SpadeExample1} show a simple definition of a function which directly returns the argument passed to it. The function is defined by the \verb+fn+-keyword similar to Rust. Just like Rust the type of the argument comes after its name, to the joy of the type theorists. The \verb+int+ type -- which means integer and is the main focus of this work -- takes a type argument that is passed inside of the angle-brackets (\verb+<>+). The argument passed to the \verb+int+-type is its wordlength, how many bits the integer fills up. A stark contrast to languages like C where you usually only have options that are powers of two. If the last statement in a function is an expression, it is automatically returned, again borrowed from Rust.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn calculate(x: int<5>) -> int<7> {
+  let partial_result: int<3> = some_function(3);
+  x + 1 * 2 - partial_result
+}
+\end{minted}
+  \caption{Some mathematical operations that }
+  \label{fig:SpadeExampleOps}
+\end{figure}
+
+Simple operations like multiplication, subtraction and addition exist and are expressed as one would expect as shown in Figure \ref{fig:SpadeExampleOps}. Functions and entities can be called with parenthesis and any Rust-user should feel right at home. Statements are separated by semicolons.
+
+\begin{figure}
+\begin{minted}[linenos]{rust}
+fn generics<#A, #B, T>(x: int<A>, t: T) -> int<B> {
+  if t == t {
+    x + x
+  } else {
+    0
+  }
+}
+\end{minted}
+  \caption{An if-expression and some generic arguments passed to a function.}
+  \label{fig:SpadeExample2}
+\end{figure}
+
+Spade has generics, which are bound to functions the function \verb+generics+ that is defined in Figure \ref{fig:SpadeExample2}. There are two different kinds of generics, those that have a \verb+#+-sign before them and those that do not. The \verb+#+ indicate a compile time integer, and are used to aid the compiler with inferring the wordlength of expressions between functions. The remaining generics are type variables which are types passed to types. There are also if-expressions in the language that allow branching, these use the same implicit returns as the function bodies.
+
+There are more language constructs in Spade, but these constructs are deemed irrelevant for this work -- for a more through reference see the Spade-book\footnote{\url{https://docs.spade-lang.org/}}.
+
+\subsection{The Spade Typechecker}
+\label{sec:TheSpadeTypechecker}
+Since Spade is a statically typed language the compiler has a typechecker. The Spade typechecker is a variant of Damas-Hindley-Milner and the intricacies of this class of type system is discussed in Section \ref{sec:TypeChecking} which discusses typechecking more broadly while this section mentions the specifics of the implementation in the Spade compiler before any changes were made.
+
+The Spade typechecker walks through he syntax tree of the program applying rules to each node, unifying (Section \ref{sec:Unification}) types which have to be equal for the program to be valid. Each expression in Spade has a corresponding typevariable which holds the type of the expression. These typevariables can also contain type variables inside them, so types with generics are encoded with their generic arguments. The implementation looks a bit like: \verb+TypeVar(Id, Vec<TypeVar>)+, this is a bit simplified but the details are enough to understand the rest of this work. The unification of the outer type variable would also cause the inner type variables to be unified.
+
+Besides type variables there are constraints and requirements -- they do different things so the synonyms make them a bit confusing to talk about. \verb+Requirement+ is the least relevant, and handles methods and fields that are ''required'' to exist on types, but also that a certain typevariable has to hold an integer of a certain value. After a \verb+Requirement+ is satisfied the affected type variables are updated and the \verb+Requirement+ is discarded.
+
+There are also \verb+ConstraintExpr+, which are used and referenced a lot more in this work. \verb+ConstraintExpr+ handle compile time integers and have functionality for adding (\verb+Sum+), subtracting (\verb+Sub+), variables (\verb+Var+), constants (\verb+Integer+) and evaluating using $\text{floor}(\log_2{n} + 1)$ where $n$ is the compiletime integer (\verb+BitsToRepresent+) -- the logarithm operation is used to find the number of bits a value needs to be represented. These constraints are solved in a similar way to the constraints, are removed when they are satisfied and relevant typevariables are then updated. The \verb+ConstraintExpr+ lack syntax and cannot be expressed outside of the typechecker.
+
+\subsection{Wordlength Inference in Spade}
+\label{sec:TheProblem}
+Most values in Spade take up bits or space in the run time environment. Wordlength inference is mostly concerned with numbers -- so consider positive numbers without a decimal. Consider a program with a counter that resets to 0 after counting to 3, we do not need 32 bits to represent it. The cost of storing a number with 32 bits compared to 2 bits could be large if it requires a larger FPGA, extra circuit components or a different power rating. Compared to software engineering of programs for general purpose computers where memory is considered abundant, FPGAs are limited in memory and computations use parts of the FPGA which causes HDLs to be designed differently to a general purpose programming languages.
+
+Wordlength inference is the compiler understanding what wordlength -- the number of bits -- is needed to store a value. Inferring this value well results in  good resource usage and requires less manual intervention. Doing it poorly or not at all either requires users to manually specify the wordlength of each value, or hardware that is inefficient.
+
+In Spade integer types are written using the \verb|int| keyword, and wordlength is specified by passing a generic to the integer type. \verb|int<3>| specifies an integer that spans 3 bits and holds values between $-(2^2) = -4$ and $2^2 - 1 = 3$. Spade also infers wordlengths based on the number of additons and multiplications -- so one addition adds one extra bit of required precision while a multiplication adds the wordlengths together. This approach means that equivalent expressions require different wordlengths depending on the number of additions and multiplications used to express it. 
+
+\begin{figure}
+\centering
+\begin{minted}[linenos]{rust}
+fn f(a: int<3>) -> int<4> {
+  a + 1 + 1
+}
+
+entity main(clk: clock, rst: bool) -> int<4> {
+  f(3)
+}
+\end{minted}
+\caption{A simple spade program that does not compile, showing the current limitations of wordlength inference.}
+\label{figSimpleFaultSpade}
+\end{figure}
+
+\begin{figure}
+\centering
+  \begin{minted}[]{text}
+error: Type error
+  |- src/simple\_fault.spade:1:27
+  |
+1 |   fn f(a: int<3>) -> int<4> {
+  |                      ------ int<4> type specified here
+  | |---------------------------^
+2 | |   a + 1 + 1
+3 | | }
+  | |-^ Found type int<5>
+  |
+  = Expected: 4
+  =       in: int<4>
+  =      Got: 5
+  =       in: int<5>
+
+Error: aborting due to previous error
+\end{minted}
+\caption{The output from the compiler when trying to compile the program in Figure \ref{figSimpleFaultSpade}}
+\label{figSimpleFaultSpadeCompileOutput}
+\end{figure}
+
+Consider the program in Figure \ref{figSimpleFaultSpade}. The function \textit{f} adds 3 values together, two of which are known constants. We also know that $2^2 + 2 < 2^3$ -- we should be able to fit the result of the addition into the 4 bit word without loss of data. The compiler does not agree as seen in the compiler output in Figure \ref{figSimpleFaultSpadeCompileOutput} where it claims we need 5 bits to store this value. This problem might seem inconsequential since calculating constant expressions during compilation would fix this, as seen by the program in Figure \ref{figSimpleCorrectSpade} compiling without worries. Adding constants is only the top of the iceberg that is this problem. The problem here is much deeper, and is a direct cause of the implementation of typechecking and wordlength inference directly.
+
+\begin{figure}
+\centering
+  \begin{minted}[linenos]{rust}
+fn f(a: int<3>) -> int<4> {
+  a + 2
+}
+
+entity main(clk: clock, rst: bool) -> int<4> {
+  f(3)
+}
+\end{minted}
+  \caption{``simple\_correct.spade`` A spade program that does compile and is equivalent to the program in Figure \ref{figSimpleFaultSpade}}
+\label{figSimpleCorrectSpade}
+\end{figure}
+
+The Spade compiler implements a Damas-Hindley–Milner typechecker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{figSimpleFaultSpade} and \ref{figSimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the compiler itself.
+
+\begin{figure}
+\centering
+  \begin{minted}[linenos]{rust}
+fn f(a: int<3>) -> int<4> {
+  trunc(a + 1 + 1)
+}
+
+entity main(clk: clock, rst: bool) -> int<4> {
+  f(3)
+}
+\end{minted}
+  \caption{``trunc\_correct.spade`` A spade program that does compile and is equivalent to the program in Figure \ref{figSimpleFaultSpade}, but here we used a truncation operation to remove bits from the integer.}
+\label{figSimpleTruncSpade}
+\end{figure}
+
+There is also another way the Spade program can be changed to make it compile. Figure \ref{figSimpleTruncSpade} adds a trunction operation to the expression in \verb+f+. The truncation operation, called \verb+trunc+, shortens the wordlength of an integer. This shortening sometimes causes information to be discarded -- but not always. The code in Figure \ref{figSimpleTruncSpade} shows a ''safe'' truncation, since no information will be discarded in this case. The \verb+trunc+-operation can be used erroneously and cause faults which might be hard to find.
+
+\begin{figure}
+\centering
+\begin{verbatim}
+trunc<4, 3>(sb1010) = sb010 = 2
+sext<4, 5>(sb1010) = sb11010 = -5
+zext<4, 5>(sb1010) = sb01010 = 10
+\end{verbatim}
+  \caption{3 Short examples for operations in spade which affect the wordlength. All the numbers are encoded using twos compliment without anyhidden bits, the wordlength is the number of 0s and 1s in the bit-string.}
+\label{figSext}
+\end{figure}
+
+In addition to \verb+trunc+ there is also \verb+sext+ and \verb+zext+ which increase wordlengths. \verb+sext+ is a ''sign extension'' and increases the wordlength of the integer while keeping the sign byte the same. \verb+zext+ is a zero extension and pads the integer with zeroes to increase the wordlength. Some simple examples are available in Figure \ref{figSext} which shows 3 examples on the binary integer \verb+sb1010+ -- encoded here using twos-compliment and we assume no hidden bits --  which is -5 in decimal. Each of the operations take type-parameter, the Spade compiler usually infers these, the first type parameter denotes the ingoing wordlength and the second the outgoing wordlength. Of special interest is the sign extension, since it does not change the numerical value of this negative integer, the padding of the bit-string is done with the leftmost-bit (the ''sign''-bit) to keep the numerical value. The ''zero extension'' naively inserts zeroes -- which correctly keeps the values for positive numbers but here results in a wild 10 appearing. The truncation simply chops of the leftmost bits and calls it a day, if there was information there the information would be lost.
+
+\subsection{HIR-lowering}
+\begin{figure}
+  \includegraphics[width=\textwidth]{architecture.png}
+  \caption{An over view of the spade compiler, taken from the Spade architecture documentation\cite{src:Architecture}.}
+  \label{figArch}
+\end{figure}
+
+Figure \ref{figArch} show the overarching architecture of the Spade language. Since the level of abstraction between Spade and Spades compile target is so different. Translating between these abstraction levels is quite complex, and is done in steps. The relevant step in this chain is called \verb+HIR-lowering+, HIR stands for ''Higher Intermediate Representation'' and is the first of these steps, the later steps are not as relevant to the typechecking but are very interesting when compiling. The HIR has been typechecked and monomorphised (Section \ref{sec:Monomorphisation})\ref{src:Architecture}.
+
+\subsection{Rust}
+Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler and snippets of Rust-code are shown in this work. \cite{src:Rust}
+
+\subsubsection{BigInt}
+Since Spade can express large wordlengths the maximum values cannot always be expressed in smaller sized integers. A solution to this is to use what is called ''BigInt'', it is an integer which has arbitrary precision. This means that really large numbers can be represented. This representation is very slow compared to ''normal'' integers and the size of these BigInts can grow unbounded.
+
+\subsubsection{BigRational}
+Besides BigInt one can define a real number with arbitrary precision, this is trivial if you have a BigInt since all rational numbers can be expressed as a ratio between two integers. This representation is also very slow compared to ''normal'' floats and the size of these BigRationals can grow unbounded. 
+
+
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
-
 
 Affine arithmetic and interval arithmetic are two common ways to estimate the value of arbitrary mathematical expressions. AA and IA can be applied to estimate bounds for mathematical functions and thus all things that can be modeled by mathematical functions. Since programs can be modeled using mathematical expressions IA and AA have a place in static analysis of programs, which is the focuses of this work. These methods are often referred to as over-estimation or self validating numerical methods.
 
@@ -441,26 +491,26 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 We start by applying the scaling rule (1) -- then the subtraction rule (2) and last the addition rule (3) giving us $2x + z - z = [-2, 4]$. This means the expression $2x + z - z$ with the context $x = [0, 1], z = [1, 3]$ always lies in the range $[-2, 4]$.
 \label{sec:prevResultIA}
 
-The conclusion we've reached is true, but the estimate is larger than it necessarily needs to be. Notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point and correct point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. But AA understand the relations between variables we evaluate if we provide the context. AA can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ must hold the same value. 
+The conclusion we've reached is true, but the estimate is larger than it necessarily needs to be. Notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point and correct point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. 
 
 \subsection{Affine Arithmetic}
-Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. That said, AA does not produce strictly better results than IA in all circumstances. However, the intersection of the results will produce better results than each individually. \cite{src:affAri}
+Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. But AA understand the relations between variables we evaluate if we provide the context. AA can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ must hold the same value. That said, AA does not produce strictly better results than IA in all circumstances.\cite{src:affAri}
 
 Though affine arithmetic is more sophisticated it does not always produce better results, interval arithmetic can for some computations produce tighter bounds. There are other methods for overestimation that are considered more sophisticated like ME-gPC \cite{src:MEgPC} and modified affine arithmetic, but the extra complexity can be added later if it is found to be needed. ME-gPC was not considered for this work due to its complexity -- but it is a good extension to the techniques explained in this work. Affine arithmetic and interval arithmetic are the simplest methods that offer enough complexity to make this work interesting.
 
 \subsubsection{Affine Arithmetic: An Example and Limitations}
-In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a real number between $[-1, 1]$) and the numbers half width ($x_i$ where $i$ is a real number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can then be combined using similar rules to interval arithmetic. Notice how the first term lacks a noise symbol, this expresses where the center of the uncertainty is. The different noise variables serve as the memory of this expression, consider subtracting $\hat{x} - \hat{x}$ with itself we get the expected result of 0 from that. \cite{src:affAri} 
+In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a real number between $[-1, 1]$) and the numbers half width ($x_i$ where $i$ is a real number). A linear combination of these noise symbols is a reasonable way to represent a "number" when reasoning about affine arithmetic, $\hat{x} = x_0 + x_1e_1 + x_2e_2 + \dots$. These terms can then be combined using similar rules to interval arithmetic. Of special interest is the first term, and the lack of a noise variable ($e_0$ is what one would have expected) -- the first term can be thought of as shifting the uncertainty up and down number line. Furthermore, we can consider the expression $\hat{x} - \hat{x}$, and since we have noise variables we get the expected result of $0$.\cite{src:affAri} 
 
-
-Here is an excerpt of relevant rules for affine arithmatic, for our simple example of $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$.
+Here is an excerpt of relevant rules for affine arithmetic.
 \begin{enumerate}
   \item $[a, b] \Rightarrow x_0 = (a + b) / 2, x_n = (a - b) / 2$ where $n$ is unique, this maps a range to its affine form $\hat{x}$
   \item $n * \hat{x} = \hat{z}$ where $z_n = n * x_n$
-  \item $-\hat{y} = \hat{z}$ where $z_n = -x_n$
+  \item $-\hat{x} = \hat{z}$ where $z_n = -x_n$
   \item $\hat{x} + \hat{y} = \hat{z}$ where $z_n = x_n + y_n$
-  \item $\hat{x} \Rightarrow [a, b]$ where $a = \sum{x_ie_i}: e_0 = 1, e_n = -1$ and $b = \sum{x_ie_i}: e_0 = 1, e_n = 1$
+  \item $\hat{x} \Rightarrow [a, b]$ where $a = x_0 + \sum_{1\dots{}n}{x_ie_i}: e_n = -1$ and $b = x_0 + \sum_{1\dots{}n}{x_ie_i}: e_n = 1$
 \end{enumerate}
 
+Time for a simple example! Let us use $2x + z - z$ where $x = [0, 1], z = [1, 3]$.
 We start by expanding the context $x = [0, 1], z = [1, 3]$ from ranges to their affine form using (rule 1), $\hat{x} = 0.5 + 0.5e_x, \hat{z} = 2 + 1e_z$, we can then expand the expression and use our other rules.
 
 \begin{align*}
@@ -473,22 +523,28 @@ We start by expanding the context $x = [0, 1], z = [1, 3]$ from ranges to their 
     \Rightarrow^{5} \quad & [1 - 1 - 0, 1 + 1 + 0] = [0, 2]\\
 \end{align*}
 
-We start by applying the scaling rule (2), then we simplify subtraction to a negation and an additon using rule (3). Now we just have a final summation using rule (4) twice. After all this the expression can be changed to a range using rule (5) which gives us $[0, 2]$, which is exactly $2x$ -- the answer that would have been preferred in Section \ref{sec:prevResultIA}. There is of course nothing magical going on here, all of these calculations are just simple algebra and we could just as easily have expanded the first expressions directly without using any special rules. However, this simplification cannot always be used. 
+We start by applying the scaling rule (2), then we simplify subtraction to a negation and an addition using rule (3). Now we just have a final summation using rule (4) twice. After all this the expression can be changed to a range using rule (5) which gives us $[0, 2]$, which is exactly $2x$ -- the answer that would have been preferred in Section \ref{sec:prevResultIA}. There is of course nothing magical going on here, all of these calculations are just simple algebra and we could just as easily have expanded the first expressions directly without using any special rules. However, this simplification cannot always be used. 
 
 \subsection{When Interval Arithmetic Is Better Than Affine Arithmetic}
-Affine arithmetic may seem like the superior option in all cases -- this is not true. Affine arithmetic has trouble with multiplication, and has to add extra noise in order to constantly overestimate. If we consider the simple case of multiplying two expressions in affine form $a + e_a$ and $b + e_b$ where $e_a$ and $e_b$ are noise variables we can use simple multiplication rules we get $(a + e_a)(b + e_b) = ab + ae_b + be_a + e_ae_b$, this is almost a valid affine form expression. But the pesky $e_ae_b$ term is illegal in AA. Since we have not defined what multiplying noise variables is (this is infact the next improvement we can do and this would get us into ME-gPC) though doing this would require handling squared noise variables which causes other problems which are out of scope. The way \cite{src:affAri} define multiplication is slightly different -- simplified they overestimate using $|(a * b)| \leq |(|b| * a + |a| * b + \text{mid}(a) * \text{mid}(b) + \text{rad}(a) * \text{rad}(b))|$ where ''min'' denotes the picking the value without a noise variable of an affine form and ''rad'' summing all terms which have a noise variable of the affine form. The extra terms are then added to a new noise variable which causes multiplications to become partially opaque -- AA cannot understand the full result of a multiplication. This means any multiplication breaks $a - a = 0$ and adds noise. This noise causes us to increase the radius -- and if the lower limit is something like $0$ which is very special in multiplication we clearly get better results with interval arithmetic.
+Affine arithmetic may seem like the superior option in all cases -- this is not true. Affine arithmetic has trouble with multiplication, and has to add extra noise in order to constantly overestimate. If we consider the simple case of multiplying two expressions in affine form $a + e_a$ and $b + e_b$ where $e_a$ and $e_b$ are noise variables we can use simple multiplication rules we get $(a + e_a)(b + e_b) = ab + ae_b + be_a + e_ae_b$, this is almost a valid affine form expression. But the pesky $e_ae_b$ term is illegal in AA. Since we have not defined what multiplying noise variables is (this is infact the next improvement we can do and this would get us into ME-gPC) though doing this would require handling squared noise variables which causes other problems which are out of scope. The way \cite{src:affAri} define multiplication is slightly different -- simplified they overestimate using $|(a * b)| \leq |(|b| * a + |a| * b + \text{mid}(a) * \text{mid}(b) + \text{rad}(a) * \text{rad}(b))|$ where ''mid'' denotes the picking the value without a noise variable of an affine form and ''rad'' summing all terms which have a noise variable of the affine form. The extra terms are then added to a new noise variable which causes multiplications to become partially opaque -- AA cannot understand the full result of a multiplication. This means any multiplication breaks $a - a = 0$ and adds noise. This noise causes us to increase the radius -- and if the lower limit is something like $0$ which is very special in multiplication we clearly get better results with interval arithmetic.
 
 This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fare a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and would give us a range poking out below $0$ while interval arithmetic would correctly infer the lower bound of $0$.
 
 When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are guaranteed to hold all potential values, we can take the subset of the guesses and still keep correctness. The method of taking the smallest subset is referred to in this report as AAIA -- since we run both methods.
 
 \section{Field Programmable Gate Array}
-A field programmable gate array (FPGA) is an application specific integrated circuit (ASIC). An FPGA is slower and draws more power than a ''normal'' circuit but FPGAs allow very fast iteration since they are programmable and are cheaper to produce in small volumes. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by configurable interconnections -- each component can then be programmed and connected individually. \cite{src:FPGA}
 
-An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by highlevel languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows massive parallelism. This makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why variables are immutable in Spade.
+% NOTE[fs]: No an ASIC is designed and built in actual silicon. It is expoensive and final. FPGAs *unreadable* circuits using programmable logic
+% NOTE[et]: Unsure what to do with this, I also feel like this isn't as relevant to the rest of the work so I've put way less time on this section compared to other sections in the background. This might be bad since it's the area I feel you have the most experience.
+
+A field programmable gate array (FPGA) is a kind of application specific integrated circuit (ASIC) -- an FPGA is reprogrammable which is not generally the case for ASICs. An FPGA is slower and draws more power than a ''normal'' circuit but FPGAs allow very fast iteration since they are programmable and are cheaper to produce in small volumes. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by configurable interconnections -- each component can then be programmed and connected individually. \cite{src:FPGA}
+
+An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by high level languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows a large amount of parallel computations and makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why variables are immutable in Spade.
 
 \subsection{Synthesis}
-Synthesis is a step which tries to simplify the boolean functions that make up a logical circuit and in turn give out logical gates. This is done by analysing the expressions and solving a minimization problem. This process is usually deterministic and is a step that tries to allocate as few gates as possible to build a circuit. In the case of FPGAs synthesis is often results in creating look up tables.
+% NOTE[fs]: I'd argue that synthesis is more than just boolean functions since it is typpically done from an HDL down to gates
+% NOTE[et]: I consider gates to be boolean functions, so I don't see your point here. I can rewrite this section since it is of more importance to the thesis than the definition of an FPGA. But if I understand FPGAs correctly. Maybe it's better to have a discussion about this.
+Synthesis is a step which tries to simplify the boolean functions that make up a logical circuit and in turn give out logical gates. This is done by analysing the expressions and solving a minimization problem. This process is usually deterministic and is a step that tries to allocate as few gates as possible to build a circuit. In the case of FPGAs synthesis maps the HDL design to the primitive circuits available in the FPGA. Primarily LUTs, but also dedicated block like multipliers and memories.
 
 \subsection{Place and Route}
 Place and Route, sometimes referred to as PNR in this work is when the program is encoded as hardware and happens after the synthesis step, which requires routing the information in the actual chip and deciding what node is responsible for what computation. This is similar to how the routes are placed on a ''normal'' circuit and is considered a computationally hard problem. Since the problem of PNR is computationally hard, a stochastic algorithm is applied, meaning the same program might not generate identical encoded hardware. When trying to measure the resource usage of FPGA programs this step needs to be run multiple times, since one run could always be a fluke.
