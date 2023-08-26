@@ -466,7 +466,6 @@ Besides BigInt one can define a real number with arbitrary precision, this is tr
 
 Affine arithmetic and interval arithmetic are two common ways to estimate the value of arbitrary mathematical expressions. AA and IA can be applied to estimate bounds for mathematical functions and thus all things that can be modeled by mathematical functions. Since programs can be modeled using mathematical expressions IA and AA have a place in static analysis of programs, which is the focuses of this work. These methods are often referred to as over-estimation or self validating numerical methods.
 
-
 \subsection{Interval Arithmetic}
 Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression. The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated -- it a very sane default value for merging together multiple branchen in a Spade match-statement, since if there are no matches we would infact have unreachable code.
 
@@ -531,6 +530,12 @@ Affine arithmetic may seem like the superior option in all cases -- this is not 
 This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fare a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and would give us a range poking out below $0$ while interval arithmetic would correctly infer the lower bound of $0$.
 
 When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are guaranteed to hold all potential values, we can take the subset of the guesses and still keep correctness. The method of taking the smallest subset is referred to in this report as AAIA -- since we run both methods.
+
+\subsection{Opaqueness}
+When reasoning about expressions and languages with the use of programs one must simplify. One of these simplifications is to not expand everything to their most complex and detailed form and settle with an overestimation. One of these overestimations is referred to in this work as opaqueness. Opaqueness means we cannot see the inner workings of an expressions but are left with parts of the information about the values that can be held there. A source of opaqueness is reducing an AA-expression to a range, since we discard the relationship between variables and reduce it to just 2 numbers. Another source is the multiplication of AA-expressions where we introduce a new noise variable, but this opaqueness is only partial since we keep most of the information just some of it is diluted.
+
+Another example might be the values passed to a function, where we are reduced to reasoning about the larger types and not the specific values. For example consider a function \verb+f+ that takes a boolean -- either \verb+true+ or \verb+false+ as an argument -- and returns an integer with 50 possible values. Let us assume \verb+f+ is a pure function, thus we only have two possible return values. But the typesystem does not reason about the return type as a set of only 2 possible values, and to the typesystem the returned type is opaque since we cannot reason about the 2 possible values returned. This is another source of opaqueness that is perhaps more abstract but quite necessary.
+
 
 \section{Field Programmable Gate Array}
 
