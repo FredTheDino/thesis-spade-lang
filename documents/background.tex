@@ -537,6 +537,7 @@ When reasoning about expressions and languages with the use of programs one must
 Another example might be the values passed to a function, where we are reduced to reasoning about the larger types and not the specific values. For example consider a function \verb+f+ that takes a boolean -- either \verb+true+ or \verb+false+ as an argument -- and returns an integer with 50 possible values. Let us assume \verb+f+ is a pure function, thus we only have two possible return values. But the typesystem does not reason about the return type as a set of only 2 possible values, and to the typesystem the returned type is opaque since we cannot reason about the 2 possible values returned. This is another source of opaqueness that is perhaps more abstract but quite necessary.
 
 
+
 \section{Field Programmable Gate Array}
 
 % NOTE[fs]: No an ASIC is designed and built in actual silicon. It is expoensive and final. FPGAs *unreadable* circuits using programmable logic

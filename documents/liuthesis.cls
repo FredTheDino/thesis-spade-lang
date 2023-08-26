@@ -1134,6 +1134,7 @@ refer to its www home page:
 \fi
 \cleardoublepage
   \newpage
+  \small \textbf{Acknowledgements}\\
   \liuthesisacknowledgments
   % \swedishenglish{\addcontentsline{toc}{chapter}{Författarens tack}}
   % {\addcontentsline{toc}{chapter}{Acknowledgments}}
