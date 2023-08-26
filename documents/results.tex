@@ -26,7 +26,7 @@ A separate wordlength inference module is not a completely obvious solution. Spl
 
 \section{Taxonomy of the Solutions and a Brief Overview}
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{tikzpicture}[
   sibling distance=5em,
   level distance=4em,
@@ -90,7 +90,7 @@ Full with unmotivated optimism the \verb+ConstraintExpr+ was extended to support
 
 % NOTE[fs]: I have  ahard time understaning this.
 % NOTE[fs]: (close to unify) Constraint(Result = BitsToRepr(BitsToRange(Lhs)...)?
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 def CheckAddition(Op=Addition, Lhs, Rhs):
   Constraint(Result = ToRepresent(MaxRange(Lhs) + MaxRange(Rhs))
@@ -105,9 +105,9 @@ def CheckIf(Condition, True, False):
 \label{fig:SecondAlgo}
 \end{figure}
 
-Figure \ref{fig:SecondAlgo} contains pseudo code for the changes introduced in this second idea. It adds 3 constraints for an addition and 1 unification for an If-Expression. Now let us ponder the case where we have the following if-expression \verb!if ... { a } else { a + 4 }! in a context where \verb+a+ is an integer of wordlength 1 (\verb+a: int<1>+). We unify both If-branches, which causes \verb+a+ to be part of the result and the \verb+Lhs+. We can infer \verb+Lhs=1+ and \verb+Result=1+, which changes the first constraints to \verb+1 = R(M(1) + 4)+. This constraint gives a contradiction which shows how inflexible this solution is. Ideally this piece of code would compile fine -- since we can easily fir $a + 4$ into the same wordlength as $a$. But to get this to typecheck we require a \verb+sext+, which highly contest out first requirement.
+Figure \ref{fig:SecondAlgo} contains pseudo code for the changes introduced in this second idea. It adds 3 constraints for an addition and 1 unification for an If-Expression. Now let us ponder the case where we have the following if-expression \verb!if ... { a } else { a + 4 }! in a context where \verb+a+ is an integer of wordlength 1 (\verb+a: int<1>+). We unify both If-branches, which causes \verb+a+ to be part of the result and the \verb+Lhs+. We can infer \verb+Lhs=1+ and \verb+Result=1+, which changes the first constraints to \verb!1 = ToRepresent(MaxRange(1) + 4)!. This constraint gives a contradiction which shows how inflexible this solution is. Ideally this piece of code would compile fine -- since we can easily fit $a + 4$ into the same wordlength as $a$. But to get this to typecheck we require a \verb+sext+, which highly contest out first requirement.
 
-The constraints listed in \ref{fig:SecondAlgo} are all equality-constraints (\verb+=+) and for this idea to work less-than-or-equal constrains (\verb+<=+) would be more suitable. Less-than-or-equal constraints might be required for wordlength inference, but these cannot be expressed in the Spade typsystem as is. The problem of adding affine arithmetic is still unsolved. We want to encode the operations and additions into a structure to support affine arithmetic -- which would then require a new system to work in parallel to . We also need to carry the information for the intervals of variables somewhere else, since the current typesystem really disagrees with encoding ranges into int-types -- a new construction is required. 
+The constraints listed in \ref{fig:SecondAlgo} are all equality-constraints (\verb+=+) and for this idea to work less-than-or-equal constrains (\verb+<=+) would be more suitable. Less-than-or-equal constraints might be required for wordlength inference, but these cannot be expressed in the Spade typsystem as is. The problem of adding affine arithmetic is still unsolved. We want to encode the operations and additions into a structure to support affine arithmetic -- which would then require a new system to work in parallel to . We also need to carry the information for the intervals of variables somewhere else, since the current typesystem really disagrees with encoding ranges into int-types -- a new construction is might be required. 
 
 \section{The Third Implementation -- Considering Equations}
 \label{sec:Third}
@@ -126,7 +126,7 @@ Almost out of desperation for getting something to work. Just to make sure this 
 
 % NOTE[fs]: The Passed Max stuff would be easier to grasp with an example of where they would appear
 % NOTE[et]: Is the problem here the entire figure or just the semantics of the `or`? I could write a long example for the entire figure or a shorter example for just the first two lines. I also interpret this comment as related to the one from the previous figure - so that this figure is hard to understand and parse. I don't know if an example would be helpful, or if this figure is the problem, so I would love some more detailed information here. 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 CheckAddition():
    # Take our best guess of a max value
@@ -148,7 +148,7 @@ CheckAddition():
 
 The pseudo code in Figure \ref{fig:pseudoFour} describe how an addition expression is wordlength inferred according to the fourth method. The code sent extra information -- besides of the wordlength stored in the type of each integer. This extra information also resulted in extra type variables which denoted the maximum value -- these type variables could not be explicitly manipulated and where hidden from the user of the language. These type variables were not strictly bound to anything and were hard to reference since they could not be found from the type they were constrained to if the constraints were satisfied and thus discarded. There was not a problem with the kind or number of constraints since \verb+LhsMax+ and \verb+RhsMax+ was always known or bound directly to a size.
 
-This was the first approach to produce better wordlength inference than the mainline-Spade wordlength inference and handled expressions such as \verb!a + 1 + 1! as one would expect by not increasing the wordlength by 2 but by 1 when the type of \verb+a+ was larger than 2. There is also a very concrete way to introduce negative ranges -- just add another type variable. This means the solution clearly solves requirements 1, 2, 3, 4 and 6 from Section \ref{figReq} -- the resource usage was never investigated.
+This was the first approach to produce better wordlength inference than the mainline-Spade wordlength inference and handled expressions such as \verb!a + 1 + 1! as one would expect by not increasing the wordlength by 2 but by 1 when the range of \verb+a+ was larger than \verb+[0, 2]+. There is also a very concrete way to introduce negative ranges -- just add another type variable. This means the solution clearly solves requirements 1, 2, 3, 4 and 6 from Section \ref{figReq} -- the resource usage was never investigated.
 
 This solution also introduced problems with the hidden type variables. Since the type variables for the maximum size cannot be referenced in any meaningful way from the type of the expression it was deemed be difficult to explain to the user of the language why a type-conclusion was reached. But since constraints were discarded after they were satisfied the relations between the type variables and the maximum size was also discarded -- this meant that range information could not be recovered. The problem of integrating AA was not prodded in since this solution was not good enough -- due to the potentially unsatisfactory error messages. The problem with equality constraints (\verb+=+) from Section \ref{sec:Forth} is also relevant, since it might force a value to have multiple wordlengths -- a neater solution is still less-than-or-equal constraint (\verb+<=+).
 
@@ -165,7 +165,7 @@ After doing a lot of thinking and reasoning we decided to see how a separate mod
 
 As a basis for the wordlength inference there is a simple type called \verb+Range+. \verb+Range+ can be directly mapped to the interval from IA. The datatype is implemented using \verb+BigInt+ to make sure no wrapping occurs. There is also a type called \verb+AAForm+ which maps directly to the form of AA expressions -- \verb+AAForm+ is implemented as variables and constant scalars which are \verb+BigRational+s. The decision of using \verb+BigRational+ was to avoid even more noise in the AA implementation.
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 def Visit(Construct):
   Constraint = match Construct:
@@ -224,7 +224,7 @@ def Visit(Construct):
 
 The idea for the implementation was to walk the entire AST a second time after typechecking had run and monomorphisation was completed -- each entity was given to the wordlength-inference module\cprotect\footnote{The wordlength-inference module was called \verb+spade-wordlength-inference+} -- this built up constraints described in the algorithm in Figure \ref{fig:AstWalker}. The algorithm makes sure to visit \textit{every} expression in the AST and record down their relation to each other and since we have already typechecked we know which expressions need to constraints built up. The algorithm in Figure \ref{fig:AstWalker} produces a mapping between language constructs and constraint equations relating it to expressions that have a relation. This mapping is almost what we want, and we can use it to produce the mapping from a type variable and an equation which describes the expressions size as related to other expressions. We can of course have multiple equations for the same type variable as long as they are consistent with each other. After all of these constraint equations have been gathered up we can pass the equations onto a solver. 
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 # Definitions of the operations that are constructed by the Visit function
 def Var(A..B):
@@ -260,7 +260,7 @@ def NoInformation:
 
 The IA method has is defined to do the following rudimentary operations from Figure \ref{fig:IaInference} when we try to evaluate the constraint, if any variable is unknown we simply abort trying to evaluate the constraint and hope we get more information somewhere else. The \verb+Addition+ and \verb+Negation+ operations can be reversed trivially. The multiplication operation however, cannot be reversed -- consider the example of \verb!(1..2) * (-3..1) = (-6..2) = (2..2) * (-3..1)!.
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 # Definitions of the operations that are constructed by the Visit function
 
@@ -321,7 +321,7 @@ def NoInformation:
 
 The code in Figure \ref{fig:AaInference} describe how the AA operations are implenmented, some of them fall back to ranges which make them opaque and some of the operations introduce extra noise variables -- these noise variables will cause inaccuracies in later results. Some of the operations are ill-defined and as a fallback the corresponding range operations are used -- for example the \verb+Union+ and \verb+BitManip+. The \verb+Multiplication+-operation is also quite complex and are partially opaque. It is also clear that some operations cannot be undone since they discard information. The AA-form that is used for the AA method was implemented using BigRational, this means that arbitrary precision rational numbers can be stored. 
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{python}
 if InferMethod == OLD: return
 
@@ -367,7 +367,7 @@ The requirements from Section \ref{figReq} where almost all satisfied by this so
 
 The implementation was also run on multiple small programs. Some were written to show which expressions can be wordlength inferred and some where written to measure the number of LUTs to see how the performance was different. 
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{center}
 \begin{tabular}{l | c c c}
   & OLD (Old version) & IA & AA \\
@@ -386,7 +386,7 @@ This implementation of the spade compiler was then run on the example program \v
 
 Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for the number of LUTs generated using ''IA (Interval Arithmetic)'' and ''AA (Affine Arithmetic)''. The average stays almost the same for all methods with ''OLD (The Old Version)'' being a bit higher than the others -- but not by a wide margin.
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{minted}[linenos]{rust}
 // Old spade wordlength inference
 fn add_and_subtract(x: int<5>) -> int<8> {
@@ -421,7 +421,7 @@ The previous attempt at changing the wordlength syntax tried to work from the sy
 Another method besides AA and IA was introduced -- this method is called AAIA and is the result of running both AA and IA in parallel and taking the subset range of both methods, this always produces the best results.
 
 
-\begin{figure}
+\begin{figure}[h!]
   \begin{minted}[linenos]{rust}
 fn twice<#A, #B, #M, #N>(x: int<A..B>) -> int<M..N> {
   2 * x
@@ -463,7 +463,7 @@ After a change has been made it needs to be verified and tested. A custom versio
 \subsubsection{spade-memory-display}
 The small library \verb+spade-memory-display+ was used for evaluation. The changes to the compiler required changes to the library code in order to compile, this made it unclear how to compare directly with older versions of the compiler since small code changes can have large changes in the output. The PNRs were run for the ice40 architecture.
  
-\begin{figure}
+\begin{figure}[h!]
 \begin{center}
 \begin{minted}[]{text}
 ICESTORM_LC: 190/1280 (14.8%)
