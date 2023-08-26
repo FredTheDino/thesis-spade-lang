@@ -484,7 +484,7 @@ All builds produced the same metrics and is presented in Figure \ref{fig:SMDoutp
 \subsubsection{A Simple FIR-filter}
 FIR-filters are often implemented in hardware since they are of great use for signal processing in general. So a simple FIR-filter program with 40 elements with the type \verb+int<0..100>+ was setup\cprotect\footnote{The FIR-filter program in its entirety is available at \href{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}{https://github.com/FredTheDino/thesis-spade-lang/tree/main/messing/fir}}. This setup used the FPGA LFE5U-85F of the architecture ''ecp5'' as target and slightly different nextpnr and yosys versions\cprotect\footnote{The nextpnr version was: \verb+"nextpnr-ecp5" -- Next Generation Place and Route (Version nextpnr-0.6-30-g679b662a)+. The yosys version was: \verb!Yosys 0.32+46 (git sha1 008b725c1, clang 10.0.0-4ubuntu1 -fPIC -Os)!} than the previous tests.
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{center}
 \begin{minted}[]{text}
 ALU54B: 0/78              (0.0%)
@@ -518,11 +518,11 @@ USRMCLK: 0/1              (0.0%)
 \end{minted}
 \end{center}
 
-  \cprotect\caption{The output from every place and route run given regardless of wordlength inference method for the simple FIR-filter. The lines of most interest are \verb+TRELLIS_COMB+, which is the number of LUTs and \verb+MULT18X18D+ which is the number of multiplication circuits -- which is equal to the number of multiplications in the filter so we know it has not been optimized out.}
+  \cprotect\caption{The output from every place and route run given regardless of wordlength inference method for the simple FIR-filter. The lines of most interest are \verb+TRELLIS_COMB+ and \verb+MULT18X18D+. \verb+TRELLIS_COMB+ is the number of LUTs and stays constants. \verb+MULT18X18D+ is the number of multiplication circuits -- which is equal to the number of multiplications in the filter so we know it is not fully optimized away.}
   \label{fig:FIRoutput}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{itemize}
   \item IA: \verb+int<0..400000>+
   \item AA: \verb+int<-200000..400000>+
@@ -553,8 +553,8 @@ The wordlength inference was also compared on 3 expressions: $a - a + a - a + a 
     $a \cdot a \cdot b \cdot b \cdot c \cdot c$         & $0..10^{12}$      & $-9.6875^{12}..10^{12}$      & $0..10^{12}$
   \end{tabular}
 
-  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the wordlength of 5 for the first three rows and all variables are in the range 0 to 100 for the last three rows. The leftmost column shows the expression that was wordlength inferred.}
+  \caption{A table showing how different wordlength inference methods compare on simple mathematical expressions where all variables have the wordlength of 5 for the first three rows and all variables are in the range 0 to 100 for the last three rows. The leftmost column shows the expression that was wordlength inferred. No digits have been removed, rounded or truncated -- though scientific notation has been used to compact the table for the final row.}
   \label{fig:CompareThings}
 \end{figure}
 
-Figure \ref{fig:CompareThings} shows a table where multiple different expressions had the wordlength inference algorithm applied to them. The inner cells in the table denote the evaluated range of the expression in the left most column according to each of the three methods outlined in the top column, all this for 2 different configurations of the input variables. Either all variables had the type \verb+int<5>+ so $a$, $b$ and $c$ had a given wordlength of 5 for the first three rows in the table, or the variables $a$, $b$ and $c$ had a type of \verb+int<0..100>+ for the bottom 3 lines in the table. From the table we can easily read out that AAIA always produced the tightest ranges. The multiplication expression ($a \cdot a \cdot b \cdot b \cdot c \cdot c$) shows an example expression where IA produces a tighter range than AA and why the AAIA.
+Figure \ref{fig:CompareThings} shows a table where multiple different expressions had the wordlength inference algorithm applied to them. The inner cells in the table denote the evaluated range of the expression in the left most column according to each of the three methods outlined in the top column, all this for 2 different configurations of the input variables. Either all variables had the type \verb+int<5>+ so $a$, $b$ and $c$ had a given wordlength of 5 for the first three rows in the table, or the variables $a$, $b$ and $c$ had a type of \verb+int<0..100>+ for the bottom 3 lines in the table. From the table we can easily read out that AAIA always produced the tightest ranges. The multiplication expression ($a \cdot a \cdot b \cdot b \cdot c \cdot c$) shows an example expression where IA produces a tighter range than AA and why AAIA produces the tightest ranges in every case.
