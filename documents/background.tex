@@ -7,17 +7,17 @@ This chapter gives a brief introduction to programming languages and programming
 % Wordlengths, HDLs and also get a section describing how they fit into this work.
 
 \section{Introduction to Compiler Structure}
-What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high-level program in C and outputting executable x86 machine code where x86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
+What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high-level program in C and outputting executable x86 machine code where x86 is considered ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
 
 Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing the compiler often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform syntactic analysis -- also known as parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree (AST). Though some compilers interweave these steps, they are usually there in spirit.
 
 The Spade compiler has both a lexer step and a parser step which are located in different modules.
 
-The compilers work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here the compiler resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The wordlength inference and optimizations will be an inner layer, the relevant details will be discussed in the Section \ref{sec:TypeChecking}. 
+The compilers' work is not done yet. After all the syntactical analysis the semantic analysis can be started, semantic analysis is sometimes referred to as the ``inner layers of the compiler``. Here the compiler resolve identifiers, run type-checking and other static program analysis or do optimizations like moving around constants to avoid needless copies. The wordlength inference and optimizations will be an inner layer, the relevant details will be discussed in the Section \ref{sec:TypeChecking}. 
 
 After the compiler has finished optimizing, the output is generated and potentially lowered (made less complex) in multiple stages, often by translating to a simpler internal representation which in the end makes generating the final output of the compiler easier.
 
-One ``layer`` is often called a ``pass``. Spade is a multi-pass compiler and perform these steps sequentially -- there are multiple passes in the Spade compiler.
+One ``layer`` is often called a ``pass``. Spade is a multi-pass compiler and perform these steps sequentially.
 \cite{src:DragonBook, src:CraftingInterp, src:KKLectures}
 
 \begin{figure}[h!]
@@ -41,7 +41,7 @@ One ``layer`` is often called a ``pass``. Spade is a multi-pass compiler and per
 Compilers have to construct a lot of complex information about the program. A visual some find helpful when reasoning about compilers is an imagined graph of ``available information``. Figure \ref{fig:InformationCompilation} tries to communicate the amount of information created in each step of compilation. The most important part being that we know a lot about the program in the type checking phase -- more than when doing syntactical analysis.
 
 \subsection{Abstract Syntax Tree}
-General purpose programming languages need to be recursive in their structure -- one might want a sub-expression inside another expression for example. Representing this structure inside a computer cannot simply be done with a simple list of values, the data-structures themselves must reflect the structure of the language. One very popular way of storing this recursive syntactical information is by using an abstract syntax tree (often referred to as an AST). An AST describes the structure of the program.
+General purpose programming languages need to be recursive in their structure -- one may want a sub-expression inside another expression for example. Representing this structure inside a computer cannot simply be done with a simple list of values, the data-structures themselves must reflect the structure of the language. One very popular way of storing this recursive syntactical information is by using an abstract syntax tree (often referred to as an AST). An AST describes the structure of the program.
 
 
 \begin{figure}[h!]
