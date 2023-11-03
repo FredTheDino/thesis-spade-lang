@@ -1,13 +1,13 @@
 \chapter{Background}
 \label{chaBackground}
-This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book (\cite{src:DragonBook}\cite{src:CraftingInterp}) on the subject. Type checking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
+This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book (\cite{src:DragonBook, src:CraftingInterp}) on the subject. Type checking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
 
 % Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
 % 
 % Wordlengths, HDLs and also get a section describing how they fit into this work.
 
 \section{Introduction to Compiler Structure}
-What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high level program in C and outputting executable x86 machine code where x86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
+What constitutes a compiler is not always obvious. A compiler, in the most banal sense, takes an input program and outputs an output program. Some want the output to be ``simpler`` than the input, passing in a high-level program in C and outputting executable x86 machine code where x86 is considered a ``simpler`` than C. The input to the compiler is often text, and we will assume this for the rest of this short introduction to compilers.
 
 Each compiler is unique, but they often have a shared structure. The first step is often to do lexical analysis (also called lexing) in a lexer or tokenizer. Here characters are abstracted away, and the compiler has done the first processing of the text. When lexing the compiler often decide what piece of text is an integer-constant, a keyword, a string, etc. After the lexing the tokens are used to perform syntactic analysis -- also known as parsing. During parsing the compiler understands structures in the program such as what is part of each function or correctly parsing the order of operations for mathematical expressions. The parsing usually produces an abstract syntax tree (AST). Though some compilers interweave these steps, they are usually there in spirit.
 
@@ -18,7 +18,7 @@ The compilers work is not done yet. After all the syntactical analysis the seman
 After the compiler has finished optimizing, the output is generated and potentially lowered (made less complex) in multiple stages, often by translating to a simpler internal representation which in the end makes generating the final output of the compiler easier.
 
 One ``layer`` is often called a ``pass``. Spade is a multi-pass compiler and perform these steps sequentially -- there are multiple passes in the Spade compiler.
-\cite{src:DragonBook}\cite{src:CraftingInterp}\cite{src:KKLectures}
+\cite{src:DragonBook, src:CraftingInterp, src:KKLectures}
 
 \begin{figure}[h!]
 \begin{center}
@@ -283,7 +283,7 @@ Most typesystems for programming languages can be mapped to one of these theoret
 
 \section{Spade}
 Spade is a HDL that takes a lot of inspiration from Rust to create a more modern HDL (Hardware Description Language). Spade has syntax which mimics that of Rust and tries to remove problems people have when using other HDLs like System Verilog. One of the biggest features of Spade is the static type checking which allows programs to be verified before even being synthesized -- creating a faster iteration loop.
-\cite{src:spadeSomething} \cite{src:spadeAnHDL}
+\cite{src:spadeSomething,src:spadeAnHDL}
 
 \subsection{Swim}
 The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like running PNR, running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
@@ -543,7 +543,7 @@ Yet another example is the values passed to a function, where we are reduced to 
 
 A field programmable gate array (FPGA) is a kind of application specific integrated circuit (ASIC) -- an FPGA is reprogrammable which is not generally the case for ASICs. An FPGA is slower and draws more power than a ''normal'' circuit but FPGAs allow very fast iteration since they are programmable and are cheaper to produce in small volumes. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by configurable interconnections -- each component can then be programmed and connected individually. \cite{src:FPGA}
 
-An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by high level languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows a large amount of parallel computations and makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why variables are immutable in Spade.
+An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by high-level languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows a large amount of parallel computations and makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why variables are immutable in Spade.
 
 \subsection{Synthesis}
 % NOTE[fs]: I'd argue that synthesis is more than just boolean functions since it is typpically done from an HDL down to gates
