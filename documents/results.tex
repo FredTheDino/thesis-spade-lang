@@ -69,7 +69,7 @@ Most of the implementations from Figure \ref{fig:taxonomy} were experiments and 
 \section{The First Implementation -- Naive}
 \label{sec:First}
 
-It was not immediately obvious how affine arithmetic would fit into the Spade typesystem. What did seem like a good idea at the time was adding ranges into the integers in the typesystem. So the initial naive implementation used the \verb+ConstraintExpr+ that existed for compile time integers and tried to force it into doing better wordlength inference. \verb+ConstraintExpr+ was the basis for the wordlength inference used in the mainline Spade compiler which simply added one to each number and was therefore what immediately sprang to mind\cprotect\footnote{The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.}.
+It was not immediately obvious how affine arithmetic would fit into the Spade typesystem. What did seem like a good idea at the time was adding ranges into the integers in the typesystem. So the initial naive implementation used the \verb+ConstraintExpr+ that existed for compile-time integers and tried to force it into doing better wordlength inference. \verb+ConstraintExpr+ was the basis for the wordlength inference used in the mainline Spade compiler which simply added one to each number and was therefore what immediately sprang to mind\cprotect\footnote{The changes for the first bash at the problem are placed on the git-branch \verb+the-simplest-implementation+ and has git-hash \verb+74c966a0317aa738017d2edf15def4719fe8dc95+.}.
 
 % After poking some more two different ways of expressing constraints and requirement were found \verb+ConstraintExpr+ and \verb+Requirement+. These very similarly named concepts are very similar. \verb+ConstraintExpr+ is used primarily for compile-time integers and has support for addition, negation, constants and logarithms. \verb+Requirement+ adds information that does not fit neatly into a Damas-Hindley-Milner typesystem, namely: fields a type is expected to have, methods a type is expected to have and if a type can hold a given integer literal. Both \verb+Requirement+s and \verb+ConstraintExpr+s are removed after they are satisfied for a type.
 
@@ -330,7 +330,7 @@ if InferMethod == OLD: return
 # equations.
 (Variables, Equations) = VisitAllIntegerExpressions(AST, TypeChecker)
 # We ask the typesystem for its deduced sizes, since we have to agree with them
-# and they are a good first guess. `Known` is a mapping from typevariables to
+# and they are a good first guess. `Known` is a mapping from type variables to
 # their known size, we will fill this in with more information as we proceed.
 Known = ExtractKnownWordlengths(Variables, AST)
 
@@ -356,7 +356,7 @@ for Var in Variables:
 \label{fig:WLIAlgo}
 \end{figure}
 
-The algorithm in Figure \ref{fig:WLIAlgo} outlines the solving of the wordlength constraints for the wordlength inference and has a runtime of $O(n^2*d)$ where $n$ is the number of equations and $d$ is the largest depth of the equations -- since we are bounded by running the loop a maximum of $n$ times. Though average runtime is significantly better since it can solve most sets of equations efficiently in fewer iterations. If the algorithm can make progress we also know that it will, since it evaluates all equations for each pass -- this is a form of breadth first search since we constantly re-check the equations and disallow variables to shrink in size we always find more information with each iteration.
+The algorithm in Figure \ref{fig:WLIAlgo} outlines the solving of the wordlength constraints for the wordlength inference and has a run-time of $O(n^2*d)$ where $n$ is the number of equations and $d$ is the largest depth of the equations -- since we are bounded by running the loop a maximum of $n$ times. Though average run-time is significantly better since it can solve most sets of equations efficiently in fewer iterations. If the algorithm can make progress we also know that it will, since it evaluates all equations for each pass -- this is a form of breadth first search since we constantly re-check the equations and disallow variables to shrink in size we always find more information with each iteration.
 
 Evaluation of the body of the constraint equation using the functions \verb+EvaluateUsingIa+ and \verb+EvaluateUsingAa+ from Figure \ref{fig:WLIAlgo} return ranges, this discards information when using AA since the reduction from AA to range is lossy. The evaluation of the built up equation was implemented by simply replacing the variables with values when the variables were known, slowly withering away at the problem. This reduction to ranges caused variables to be opaque to the wordlength inference.
 
@@ -382,32 +382,32 @@ Smallest number of LUTs&171.0&171.0&167.0 \\
 \end{center}
 \end{figure}
 
-This implementation of the spade compiler was then run on the example program \verb+spade-memory-display+\cprotect\footnote{using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+}. A simple bash script was made to record the number of LUTs used in the FPGA when the command was executed and this was stored in a file. The program was compiled 51 times for the three configurations: ''Old Mode'' -- denoted by ''OLD'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA''. The number of LUTs used was then fed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
+This implementation of the Spade compiler was then run on the example program \verb+spade-memory-display+\cprotect\footnote{using the swim command \verb+SPADE_INFER_METHOD=XX swim pnr+}. A simple bash script was made to record the number of LUTs used in the FPGA when the command was executed and this was stored in a file. The program was compiled 51 times for the three configurations: ''Old Mode'' -- denoted by ''OLD'', ''Affine Arithmetic'' -- denoted by ''AA'', ''Interval Arithmetic'' -- denoted by ''IA''. The number of LUTs used was then fed into a spreadsheet program and produced the table in Figure \ref{fig:SpadeCompilations50Table}.
 
 Figure \ref{fig:SpadeCompilations50Table} shows a slight decrease in variance for the number of LUTs generated using ''IA (Interval Arithmetic)'' and ''AA (Affine Arithmetic)''. The average stays almost the same for all methods with ''OLD (The Old Version)'' being a bit higher than the others -- but not by a wide margin.
 
 \begin{figure}[h!]
 \begin{minted}[linenos]{rust}
-// Old spade wordlength inference
+// Old Spade wordlength inference
 fn add_and_subtract(x: int<5>) -> int<8> {
   (x - x) + (x - x) + sext(x - x)
 }
 
-// New spade wordlength inference using AA
+// New Spade wordlength inference using AA
 fn add_and_subtract(x: int<5>) -> int<0> {
   (x - x) + (x - x) + (x - x)
 }
 
-// New spade wordlength inference using IA
+// New Spade wordlength inference using IA
 fn add_and_subtract(x: int<5>) -> int<8> {
   (x - x) + (x - x) + (x - x)
 }
 \end{minted}
-  \caption{A simple spade function showing the difference in the wordlength inference with the new approaches with a focus on addition and subtraction.}
+  \caption{A simple Spade function showing the difference in the wordlength inference with the new approaches with a focus on addition and subtraction.}
   \label{fig:CodeThatWorksNow}
 \end{figure}
 
-These changes did show promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} were type checked a lot better by the spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_and_subtract+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- compared to the ''Old'' approach which returns an integer with 8 bits but requires a manual sign extensions which may not be placed on another part of the expression. Looking at this code fewer truncations are needed since the compiler knows more about the actual size of the expressions. There is also an argument for the analysis part of this code, a function that returns an \verb+int<0>+ is probably not doing anything meaningful and should probably be optimized out.
+These changes did show promise in the usability of the language. Snippets like the one shown in Figure \ref{fig:CodeThatWorksNow} were type checked a lot better by the Spade compiler and in that sense a usability improvement can be seen, note especially the difference in the return type of the function \verb+add_and_subtract+ where the one typechecked with ''Affine Arithmetic'' always returns 0 and ''Interval Arithmetic'' returns 8 bits -- compared to the ''Old'' approach which returns an integer with 8 bits but requires a manual sign extensions which may not be placed on another part of the expression. Looking at this code fewer truncations are needed since the compiler knows more about the actual size of the expressions. There is also an argument for the analysis part of this code, a function that returns an \verb+int<0>+ is probably not doing anything meaningful and should probably be optimized out.
 
 This implementation does however leave a question unanswered: how does a user of the Spade language define these ranges? Since the changes discussed until now have not touched the syntax or the type checker (except disabling the old wordlength inference), the entire language as a whole is completely blind to the ranged-based wordlength inference. The current approach seemed to work well and it was decided that the best course of action was to extend this implementation with new syntax.
 
@@ -441,7 +441,7 @@ entity main(clk: clock, rst: bool) -> int<14..14> {
   c
 }
   \end{minted}
-  \caption{A small spade program that shows the new range syntax in context and gives an example of how integer range information is now more detailed.}
+  \caption{A small Spade program that shows the new range syntax in context and gives an example of how integer range information is now more detailed.}
   \label{fig:BetterProgram}
 \end{figure}
 
@@ -453,7 +453,7 @@ It is also worth noting that the extra types in on lines 10 to 12 in Figure \ref
 
 The \verb+int+ type also had to change to work with 2 generic arguments -- a lower and a higher bound. These types had to be inserted in the type checker. Making this change in full would require rewriting almost every single spade-compiler test, and would be a substantial amount of work and time, more time than this thesis has been allotted. The decisions to break with the best practices of software development was taken to make sure the thesis could be finished at all. Some of the tests were fixed where it was deemed simple to do so. Most of these changes were very mechanical though. The wordlength inference code also needed to be changed slightly to accept the new ranges as inputs from the type checker.
 
-These changes also made the type checker aware of the range based semantics of integers in the wordlength inferrer -- thus the type checker could be used to propagate type information about these ranges. This made all library functions which previously only used wordlengths work properly with arbitrary range. Users of the spade language can now also specify ranges on their types themselves.
+These changes also made the type checker aware of the range based semantics of integers in the wordlength inferrer -- thus the type checker could be used to propagate type information about these ranges. This made all library functions which previously only used wordlengths work properly with arbitrary range. Users of the Spade language can now also specify ranges on their types themselves.
 
 The very basic implementation in this thesis does not handle memories and registers. Though supporting them should be very minor work, but requires a lot more verification. There are also questions as to the language features of registers and memories should interact with the range-based syntax of integers. The unification rules from the type checker are also very strict and disallow things like passing a constant to a function that takes an integer argument that is not constant. How to solve these problems is according to the thesis authors a matter of taste, though the problems need addressing for a well functioning and friendly compiler.
 
