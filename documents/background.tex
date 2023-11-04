@@ -1,6 +1,6 @@
 \chapter{Background}
 \label{chaBackground}
-This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book (\cite{src:DragonBook, src:CraftingInterp}) on the subject. Type checking and type inference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
+This chapter gives a brief introduction to programming languages and programming language theory -- though not nearly as comprehensive as a good book (\cite{src:DragonBook, src:CraftingInterp}) on the subject. Type checking and typeinference is also discussed. A birdseye view of computer-hardware and FPGA design is also given, for example what exactly is meant by wordlength.
 
 % Programming languages in general is considered one of the more mature topics in computer science. There are many, many books and papers written on compilers. Some programmers even consider compilers to be black boxes which they must obey, frightened of the complexities and details of the black magic working inside. This background aims to unbox these beasts called compilers and shed some light on them. Explaining all the details of a compiler and the type checker is out of scope for this background.
 % 
@@ -139,7 +139,7 @@ For details regarding the Spade type checker, see Section \ref{sec:TheSpadeTypec
 
 The type checker in Spade is a Damas-Hindley-Milner type checker \cite{src:DamasHindleyMilner}. This means it stops on the first error and can deduce types to their most general form. So if asked to type check the identity function (a function that takes one value and returns the value as is, the function does nothing) the type checker will be able to deduce that the argument can have any type, but that the type is the same as the type of the returned value, with only the body of the function.\cite{src:DamasHindleyMilner}
 
-There is also a connected topic of type inference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferer can be used to check the types of the program and can easily be made into a type checker. It is infact upon this idea that the Damas-Hindley-Milner typechecker works. In this work, we consider typechecking and typeinference the same operations -- since Spade implements typechecking using typeinference. This equivalence is not the same for all typecheckers, since some only check types without inferring.
+There is also a connected topic of typeinference -- a program that guesses the types of expressions based on the context. A sufficiently good typeinferer can be used to check the types of the program and can easily be made into a type checker. It is infact upon this idea that the Damas-Hindley-Milner typechecker works. In this work, we consider typechecking and typeinference the same operations -- since Spade implements typechecking using typeinference. This equivalence is not the same for all typecheckers, since some only check types without inferring.
 
 \subsection{Unification}
 \label{sec:Unification}
@@ -286,7 +286,7 @@ Spade is an HDL that takes a lot of inspiration from Rust to create a more moder
 \cite{src:spadeSomething,src:spadeAnHDL}
 
 \subsection{Swim}
-The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like determine place-and-route (PNR), running synthesis tools, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
+The Spade-ecosystem has a build-tool call Swim. Swim orchestrates things like determine synthesis and place-and-route (PNR), running synthesis tools independently, installing dependencies, generating basic projects and compiling Spade-code. Swim is the best way to handle any Spade project.
 
 \subsection{Spade syntax}
 All programming languages have some kind of syntax -- and Spade has taken a lot of inspiration from Rust in this domain but make additions and tweaks due to the different domain of the language. This section contains a short version of the relevant Spade syntax, there is more to the Spade-language but some short snippets are explained here.
@@ -432,9 +432,9 @@ There is also another way the Spade program can be changed to make it compile. F
 \begin{figure}[h!]
 \centering
 \begin{verbatim}
-trunc<4, 3>(sb1010) = sb010 = 2
-sext<4, 5>(sb1010) = sb11010 = -6
-zext<4, 5>(sb1010) = sb01010 = 10
+trunc<4, 3>(sb1010) =   sb010 = 2
+ sext<4, 5>(sb1010) = sb11010 = -6
+ zext<4, 5>(sb1010) = sb01010 = 10
 \end{verbatim}
   \caption{3 Short examples for operations in Spade which affect the wordlength. All the numbers are encoded using twos compliment without anyhidden bits, the wordlength is the number of 0s and 1s in the bit-string.}
 \label{figSext}
