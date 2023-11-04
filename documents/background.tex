@@ -56,7 +56,7 @@ General purpose programming languages need to be recursive in their structure --
   \cprotect\caption{A simple grammar for integer expressions. Here an \verb|<expr>| is either a \verb|<num>|, so a simple number, or the it is a sum of two \verb|<expr>|.}
   \label{fig:bnfExpr}
 \end{figure}
-For example, consider the grammar for integer addition expressions described in grammar shown in Figure \ref{fig:bnfExpr}. The syntax understands whole numbers from 1 to 3 and the basic arithmetic operation addition (\verb!+!). Most notable is that the syntax is recursive and expressions can contain expressions in themselves. This BNF-like syntax is a bit simplified and the grammar is not necessarily in a good format. A better grammar would handle order of operations and avoid ambiguities -- which will be explained later.
+For example, consider the grammar for integer addition expressions described in grammar shown in Figure \ref{fig:bnfExpr}. The syntax understands whole numbers from 1 to 3 and the basic arithmetic operation addition (\verb!+!). Most notable is that the syntax is recursive and expressions can contain expressions in themselves. This BNF-like syntax is a bit simplified and the grammar is not necessarily in a good format. A better grammar will handle order of operations and avoid ambiguities -- which will be explained later.
 
 The basic idea of the BNF is that we can expand each node -- and all expansions are valid say{programs} in the language. Here valid means syntactically correct -- it does not mean the ideas expressed in the say{program} are meaningful in any way. The rules expressed in the BNF say that an \verb|<expr>| may be replaced with either \verb|<num>| or \verb|<expr> + <expr>| And that a \verb|<num>| can be replaced with \verb|1| or \verb|2| or \verb|3|. All valid programs are \verb|<expr>| we can start expanding from there -- the simplest program may be \verb|1| since we can get this from expanding \verb|<expr> -> <num> -> 1|. But we could also do the expansions:
 \begin{verbatim}
@@ -147,7 +147,7 @@ A Damas-Hindley-Milner type checker is a very simple typechecker and is based up
 
 This unification property is also found in logic-programming, which is not a coincidence but rather an effect of the Curry–Howard isomorphism. \cite{src:curryHowardIso}
 
-We find examples useful to quickly get basic understanding of a topic, so we will outline the type checking of a simple program and how the unification step would work. We will typecheck the simple program in Figure \ref{fig:progUni}.
+We find examples useful to quickly get basic understanding of a topic, so we will outline the type checking of a simple program and how the unification step will work. We will typecheck the simple program in Figure \ref{fig:progUni}.
 
 \begin{figure}[h!]
 \centering
@@ -340,7 +340,7 @@ There are more language constructs in Spade, but these constructs are deemed irr
 \label{sec:TheSpadeType checker}
 Since Spade is a statically typed language the compiler has a type checker. The Spade typechecker is a variant of Damas-Hindley-Milner and the intricacies of this class of type system is discussed in Section \ref{sec:TypeChecking} which discusses typechecking more broadly while this section mentions the specifics of the implementation in the Spade compiler before any changes were made.
 
-The Spade type checker walks through he syntax tree of the program applying rules to each node, unifying types (Section \ref{sec:Unification}) which have to be equal for the program to be valid. Each expression in Spade has a corresponding type variable which holds the type of the expression. These type variables can also contain type variables inside them, so types with generics are encoded with their generic arguments. The implementation looks a bit like: \verb+TypeVar(Id, Vec<TypeVar>)+, this is a bit simplified but the details are enough to understand the rest of this work. The unification of the outer type variable would also cause the inner type variables to be unified.
+The Spade type checker walks through he syntax tree of the program applying rules to each node, unifying types (Section \ref{sec:Unification}) which have to be equal for the program to be valid. Each expression in Spade has a corresponding type variable which holds the type of the expression. These type variables can also contain type variables inside them, so types with generics are encoded with their generic arguments. The implementation looks a bit like: \verb+TypeVar(Id, Vec<TypeVar>)+, this is a bit simplified but the details are enough to understand the rest of this work. The unification of the outer type variable will also cause the inner type variables to be unified.
 
 Besides type variables there are constraints and requirements -- they do different things so the synonyms make them a bit confusing to talk about. \verb+Requirement+ is the least relevant, and handles methods and fields that are say{required} to exist on types, but also that a certain type variable has to hold an integer of a certain value. After a \verb+Requirement+ is satisfied the affected type variables are updated and the \verb+Requirement+ is discarded.
 
@@ -348,9 +348,9 @@ There are also \verb+ConstraintExpr+, which are used and referenced a lot more i
 
 \subsection{Wordlength Inference in Spade}
 \label{sec:TheProblem}
-Most values in Spade take up bits or space in the run-time environment. Wordlength inference is mostly concerned with integers -- so consider positive numbers without a decimal. Consider a program with a counter that resets to 0 after counting to 3, we do not need 32 bits to represent it. The cost of storing a number with 32 bits compared to 2 bits could be large if it requires a larger FPGA, extra circuit components or a different power rating. Compared to software engineering of programs for general purpose computers where memory is considered abundant, FPGAs are limited in memory and computations use parts of the FPGA which causes HDLs to be designed differently to a general purpose programming languages.
+Most values in Spade take up bits or space in the run-time environment. Wordlength inference is mostly concerned with integers -- so consider positive numbers without a fractional part. Consider a program with a counter that resets to 0 after counting to 3, we do not need 32 bits to represent it. The cost of storing a number with 32 bits compared to 2 bits could be large if it requires a larger FPGA, extra circuit components or a different power rating. Compared to software engineering of programs for general purpose computers where memory is considered abundant, FPGAs are limited in memory and computations use parts of the FPGA which causes HDLs to be designed differently to a general purpose programming languages.
 
-Wordlength inference is the compiler understanding what wordlength -- the number of bits -- is needed to store a value. Inferring this value well results in  good resource usage and requires less manual intervention. Doing it poorly or not at all either requires users to manually specify the wordlength of each value, or hardware that is inefficient.
+Wordlength inference is the compiler understanding what wordlength -- the number of bits -- is needed to store a value. Inferring this value well results in  good resource usage and requires less manual intervention. Doing it poorly or not at all either requires users to manually specify the wordlength of each value, or produces hardware that is inefficient.
 
 In Spade integer types are written using the \verb|int| keyword, and wordlength is specified by passing a generic to the integer type. \verb|int<3>| specifies an integer that spans 3 bits and holds values between $-(2^2) = -4$ and $2^2 - 1 = 3$. Spade also infers wordlengths based on the number of additons and multiplications -- so one addition adds one extra bit of required precision while a multiplication adds the wordlengths together. This approach means that equivalent expressions require different wordlengths depending on the number of additions and multiplications used to express it. 
 
@@ -362,7 +362,7 @@ fn f(a: int<3>) -> int<4> {
 }
 
 entity main(clk: clock, rst: bool) -> int<4> {
-  f(3)
+  f(0b111)
 }
 \end{minted}
 \caption{A simple Spade program that does not compile, showing the current limitations of wordlength inference.}
@@ -393,7 +393,7 @@ Error: aborting due to previous error
 \label{figSimpleFaultSpadeCompileOutput}
 \end{figure}
 
-Consider the program in Figure \ref{figSimpleFaultSpade}. The function \textit{f} adds 3 values together, two of which are known constants. We also know that $2^2 + 2 < 2^3$ -- we should be able to fit the result of the addition into the 4 bit word without loss of data. The compiler does not agree as seen in the compiler output in Figure \ref{figSimpleFaultSpadeCompileOutput} where it claims we need 5 bits to store this value. This problem may seem inconsequential since calculating constant expressions during compilation would fix this, as seen by the program in Figure \ref{figSimpleCorrectSpade} compiling without worries. Adding constants is only the tip of the iceberg that is this problem. The problem here is much deeper, and is a direct cause of the implementation of type checking and wordlength inference directly.
+Consider the program in Figure \ref{figSimpleFaultSpade}. The function \textit{f} adds three values together, two of which are known constants. We also know that $2^2 + 2 < 2^3$ -- we should be able to fit the result of the addition into the 4 bit word without loss of data. The compiler does not agree as seen in the compiler output in Figure \ref{figSimpleFaultSpadeCompileOutput} where it claims we need 5 bits to store this value. This problem may seem inconsequential since calculating constant expressions during compilation will fix this, as seen by the program in Figure \ref{figSimpleCorrectSpade} compiling without worries. Adding constants is only the tip of the iceberg that is this problem. The problem here is much deeper, and is a direct cause of the implementation of type checking and wordlength inference directly.
 
 \begin{figure}[h!]
 \centering
@@ -410,7 +410,7 @@ entity main(clk: clock, rst: bool) -> int<4> {
 \label{figSimpleCorrectSpade}
 \end{figure}
 
-The Spade compiler implements a Damas-Hindley–Milner type checker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{figSimpleFaultSpade} and \ref{figSimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the typechecking algorithm itself.
+The Spade compiler implements a Damas-Hindley-Milner type checker -- discussed in more detail in Section \ref{sec:TypeChecking}. Damas-Hindley-Milner runs in almost linear time (if implemented correctly) but is not complete. The completeness property for type checkers means there are programs which are correct but that the type checker will not recognize as correct. The programs from Figures \ref{figSimpleFaultSpade} and \ref{figSimpleCorrectSpade} are an example of this. This observation is important since it means this is not a bug, but a limitation of the typechecking algorithm itself.
 
 \begin{figure}[h!]
 \centering
@@ -433,14 +433,14 @@ There is also another way the Spade program can be changed to make it compile. F
 \centering
 \begin{verbatim}
 trunc<4, 3>(sb1010) = sb010 = 2
-sext<4, 5>(sb1010) = sb11010 = -5
+sext<4, 5>(sb1010) = sb11010 = -6
 zext<4, 5>(sb1010) = sb01010 = 10
 \end{verbatim}
   \caption{3 Short examples for operations in Spade which affect the wordlength. All the numbers are encoded using twos compliment without anyhidden bits, the wordlength is the number of 0s and 1s in the bit-string.}
 \label{figSext}
 \end{figure}
 
-In addition to \verb+trunc+ there is also \verb+sext+ and \verb+zext+ which increase wordlengths. \verb+sext+ is a say{sign extension} and increases the wordlength of the integer while keeping the sign byte the same. \verb+zext+ is a zero extension and pads the integer with zeroes to increase the wordlength. Some simple examples are available in Figure \ref{figSext} which shows 3 examples on the binary integer \verb+sb1010+ -- encoded here using twos-compliment and we assume no hidden bits --  which is -5 in decimal. Each of the operations take type-parameter, the Spade compiler usually infers these, the first type parameter denotes the ingoing wordlength and the second the outgoing wordlength. Of special interest is the sign extension, since it does not change the numerical value of this negative integer, the padding of the bit-string is done with the leftmost-bit (the say{sign}-bit) to keep the numerical value. The say{zero extension} naively inserts zeroes -- which correctly keeps the values for positive numbers but here results in a wild 10 appearing. The truncation simply chops of the leftmost bits and calls it a day, if there was information there the information would be lost.
+In addition to \verb+trunc+ there is also \verb+sext+ and \verb+zext+ which increase wordlengths. \verb+sext+ is a say{sign extension} and increases the wordlength of the integer while keeping the sign byte the same. \verb+zext+ is a zero extension and pads the integer with zeroes to increase the wordlength. Some simple examples are available in Figure \ref{figSext} which shows three examples on the binary integer \verb+sb1010+ -- encoded here using two's-complement and we assume no hidden bits --  which is -6 in decimal. Each of the operations take type-parameter, the Spade compiler usually infers these, the first type parameter denotes the ingoing wordlength and the second the outgoing wordlength. Of special interest is the sign extension, since it does not change the numerical value of this negative integer, the padding of the bit-string is done with the leftmost-bit (the say{sign}-bit) to keep the numerical value. The say{zero extension} naively inserts zeroes -- which correctly keeps the values for positive numbers but here results in a wild 10 appearing. The truncation simply chops of the leftmost bits and calls it a day, if there is information there the information will be lost.
 
 \subsection{HIR-lowering}
 \begin{figure}[h!]
@@ -449,13 +449,13 @@ In addition to \verb+trunc+ there is also \verb+sext+ and \verb+zext+ which incr
   \label{figArch}
 \end{figure}
 
-Figure \ref{figArch} show the overarching architecture of the Spade language. Since the level of abstraction between Spade and Spades compile target is so different. Translating between these abstraction levels is quite complex, and is done in steps. The relevant step in this chain is called \verb+HIR-lowering+, HIR stands for say{Higher Intermediate Representation} and is the first of these steps, the later steps are not as relevant to the type checking but are very interesting when compiling. The HIR has been typechecked and monomorphised (Section \ref{sec:Monomorphisation})\cite{src:Architecture}.
+Figure \ref{figArch} shows the overarching architecture of the Spade language. Since the level of abstraction between Spade and Spade's compile target is so different, translating between these abstraction levels is quite complex and is done in steps. The relevant step in this chain is called \verb+HIR-lowering+, HIR stands for say{Higher Intermediate Representation} and is the first of these steps, the later steps are not as relevant to the type checking but are very interesting when compiling. The HIR has been typechecked and monomorphised (Section \ref{sec:Monomorphisation})\cite{src:Architecture}.
 
 \subsection{Rust}
 Rust is a statically typed general purpose systems programming language. The language has recently seen a lot of popularity and boasts features like high performance, reliable software and increased developer productivity. It is also the language that is used to write the Spade compiler. \cite{src:Rust}
 
 \subsubsection{BigInt}
-Since Spade can express large wordlengths the maximum values cannot always be expressed in smaller sized integers. A solution to this is to use what is called say{BigInt} it is an integer which has arbitrary precision. This means that really large numbers can be represented. This representation is very slow compared to say{normal} integers and the size of these BigInts can grow unbounded.
+Since Spade can express large wordlengths the maximum values cannot always be expressed in smaller sized integers. A solution to this is to use what is called say{BigInt} which is an integer with arbitrary precision. This means that really large numbers can be represented. This representation is very slow compared to say{normal} integers and the size of these BigInts can grow unbounded.
 
 \subsubsection{BigRational}
 Besides BigInt one can define a real number with arbitrary precision, this is trivial if you have a BigInt since all rational numbers can be expressed as a ratio between two integers. This representation is also very slow compared to say{normal} floats and the size of these BigRationals can grow unbounded. 
@@ -464,15 +464,15 @@ Besides BigInt one can define a real number with arbitrary precision, this is tr
 \section{Interval Arithmetic, Affine Arithmetic and Self Validating Numerical Methods}
 \label{sec:IAndAA}
 
-Affine arithmetic and interval arithmetic are two common ways to estimate the value of arbitrary mathematical expressions. AA and IA can be applied to estimate bounds for mathematical functions and thus all things that can be modeled by mathematical functions. Since programs can be modeled using mathematical expressions IA and AA have a place in static analysis of programs, which is the focuses of this work. These methods are often referred to as over-estimation or self validating numerical methods.
+Affine arithmetic (AA) and interval arithmetic (IA) are two common ways to estimate the value of arbitrary mathematical expressions. AA and IA can be applied to estimate bounds for mathematical functions and thus all things that can be modeled by mathematical functions. Since programs can be modeled using mathematical expressions IA and AA have a place in static analysis of programs, which is the focuses of this work. These methods are often referred to as over-estimation or self validating numerical methods. \cite{src:affAri}
 
 \subsection{Interval Arithmetic}
-Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression. The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated -- it a very sane default value for merging together multiple branchen in a Spade match-statement, since if there are no matches we would infact have unreachable code.
+Interval arithmetic operates on intervals, as the name implies. A value -- or in the context of a program, a variable -- has a smallest and largest value it can assume. Consider \verb`x = random_real()`, where \verb`random_real` generates a random value in the range $[0, 1]$. We can express this in interval arithmetic as $\bar{x} = [0, 1]$, intervals will be denoted with a bar on top to separate them from the variables. Note especially that the true value of $x$ lies in the interval $\bar{x}$. In this example we know $0 \leq x \leq 1$, also written as $x \in [0, 1]$. These intervals can be added, negated, and so on, to give you an estimate of an arbitrary expression. The empty interval is also defined and written as $[]$. The empty interval usually denotes expressions or code that cannot be reached or evaluated -- it a very sane default value for merging together multiple branchen in a Spade match-statement, since if there are no matches we will infact have unreachable code.
 
 \subsubsection{Interval Arithmetic: An Example and Limitations}
 Some of the rules for interval arithmetic are:
 \begin{enumerate}
-  \item $n * [a, b] = [n * a, n * b]$
+  \item $n \times [a, b] = [n \times a, n \times b]$
   \item $[a, b] - [c, d] = [a - d, b - c])$
   \item $[a, b] + [c, d] = [a + c, b + d]$
 \end{enumerate}
@@ -480,8 +480,8 @@ Some of the rules for interval arithmetic are:
 We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$. This mean we have the expression after expanding the variables which we can calculate:
 \begin{align*}
   2x + z - z \\
-  =^{\text{expansion}} \quad & 2 * [0, 1] + [1, 3] - [1, 3] \\
-  =^{1}                \quad & [2 * 0, 2 * 1] + [1, 3] - [1, 3] \\
+  =^{\text{expansion}} \quad & 2 \times [0, 1] + [1, 3] - [1, 3] \\
+  =^{1}                \quad & [2 \times 0, 2 \times 1] + [1, 3] - [1, 3] \\
   =^{2}                \quad & [0, 2] + [1 - 3, 3 - 1] \\
   =^{\text{simplify}}  \quad & [0, 2] + [-2, 2] \\
   =^{3}                \quad & [0 + -2, 2 + 4] \\
@@ -490,7 +490,7 @@ We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z 
 We start by applying the scaling rule (1) -- then the subtraction rule (2) and last the addition rule (3) giving us $2x + z - z = [-2, 4]$. This means the expression $2x + z - z$ with the context $x = [0, 1], z = [1, 3]$ always lies in the range $[-2, 4]$.
 \label{sec:prevResultIA}
 
-The conclusion we've reached is true, but the estimate is larger than it necessarily needs to be. Notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point and correct point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation would exist if used to do static analysis of programs. 
+The conclusion we have reached is true, but the estimate is larger than it necessarily needs to be. Notice that subtracting the value $z$ from itself should result in $0$, which is a perfectly valid point and correct point. This is a limitation of the interval arithmetic. Interval arithmetic does not reason about the expressions that came before it and how they combine, and this limitation will exist if used to do static analysis of programs. 
 
 \subsection{Affine Arithmetic}
 Affine arithmetic (AA) works similarly to interval arithmetic (IA), but has a memory of where values come from and can reason about their combinations at a higher level. But AA understand the relations between variables we evaluate if we provide the context. AA can more accurately calculate expressions like $a - a$ since it understands that $a$ and $a$ must hold the same value. That said, AA does not produce strictly better results than IA in all circumstances.\cite{src:affAri}
@@ -503,7 +503,7 @@ In affine arithmetic there is a concept of noise symbols ($e_i$ where $i$ is a r
 Here is an excerpt of relevant rules for affine arithmetic.
 \begin{enumerate}
   \item $[a, b] \Rightarrow x_0 = (a + b) / 2, x_n = (a - b) / 2$ where $n$ is unique, this maps a range to its affine form $\hat{x}$
-  \item $n * \hat{x} = \hat{z}$ where $z_n = n * x_n$
+  \item $n \times \hat{x} = \hat{z}$ where $z_n = n \times x_n$
   \item $-\hat{x} = \hat{z}$ where $z_n = -x_n$
   \item $\hat{x} + \hat{y} = \hat{z}$ where $z_n = x_n + y_n$
   \item $\hat{x} \Rightarrow [a, b]$ where $a = x_0 + \sum_{1\dots{}n}{x_ie_i}: e_n = -1$ and $b = x_0 + \sum_{1\dots{}n}{x_ie_i}: e_n = 1$
@@ -514,7 +514,7 @@ We start by expanding the context $x = [0, 1], z = [1, 3]$ from ranges to their 
 
 \begin{align*}
     2x + z - z \\
-    =^{\text{expansion}} \quad & 2 * (0.5 + 0.5e_x) + (2 + e_z) - (2 + e_z) \\
+    =^{\text{expansion}} \quad & 2 \times (0.5 + 0.5e_x) + (2 + e_z) - (2 + e_z) \\
     =^{2} \quad & (1 + e_x) + (2 + e_z) - (2 + e_z) \\
     =^{3} \quad & (1 + e_x) + (2 + e_z) + (-2 + -e_z) \\
     =^{4} \quad & (3 + e_x + e_z) + (-2 + -e_z) \\
@@ -525,30 +525,30 @@ We start by expanding the context $x = [0, 1], z = [1, 3]$ from ranges to their 
 We start by applying the scaling rule (2), then we simplify subtraction to a negation and an addition using rule (3). Now we just have a final summation using rule (4) twice. After all this the expression can be changed to a range using rule (5) which gives us $[0, 2]$, which is exactly $2x$ -- the answer that would have been preferred in Section \ref{sec:prevResultIA}. There is of course nothing magical going on here, all of these calculations are just simple algebra and we could just as easily have expanded the first expressions directly without using any special rules. However, this simplification cannot always be used. 
 
 \subsection{When Interval Arithmetic Is Better Than Affine Arithmetic}
-Affine arithmetic may seem like the superior option in all cases -- this is not true. Affine arithmetic has trouble with multiplication, and has to add extra noise in order to constantly overestimate. If we consider the simple case of multiplying two expressions in affine form $a + e_a$ and $b + e_b$ where $e_a$ and $e_b$ are noise variables we can use simple multiplication rules we get $(a + e_a)(b + e_b) = ab + ae_b + be_a + e_ae_b$, this is almost a valid affine form expression. But the pesky $e_ae_b$ term is illegal in AA. Since we have not defined what multiplying noise variables is (this is infact the next improvement we can do and this would get us into ME-gPC) though doing this would require handling squared noise variables which causes other problems which are out of scope. The way \cite{src:affAri} define multiplication is slightly different -- simplified they overestimate using $|(a * b)| \leq |(|b| * a + |a| * b + \text{mid}(a) * \text{mid}(b) + \text{rad}(a) * \text{rad}(b))|$ where say{mid} denotes the picking the value without a noise variable of an affine form and say{rad} summing all terms which have a noise variable of the affine form. The extra terms are then added to a new noise variable which causes multiplications to become partially opaque -- AA cannot understand the full result of a multiplication. This means any multiplication breaks $a - a = 0$ and adds noise. This noise causes us to increase the radius -- and if the lower limit is something like $0$ which is very special in multiplication we clearly get better results with interval arithmetic.
+Affine arithmetic may seem like the superior option in all cases -- this is not true. Affine arithmetic has trouble with multiplication, and has to add extra noise in order to constantly overestimate. If we consider the simple case of multiplying two expressions in affine form $a + e_a$ and $b + e_b$ where $e_a$ and $e_b$ are noise variables we can use simple multiplication rules we get $(a + e_a)(b + e_b) = ab + ae_b + be_a + e_ae_b$, this is almost a valid affine form expression. But the pesky $e_ae_b$ term is illegal in AA. Since we have not defined what multiplying noise variables is (this is infact the next improvement we can do and results in  ME-gPC) though doing this will require handling squared noise variables which causes other problems which are out of scope. The way \cite{src:affAri} define multiplication is slightly different -- simplified they overestimate using $|(a \times b)| \leq |(|b| \times a + |a| \times b + \text{mid}(a) \times \text{mid}(b) + \text{rad}(a) \times \text{rad}(b))|$ where say{mid} denotes the picking the value without a noise variable of an affine form and say{rad} summing all terms which have a noise variable of the affine form. The extra terms are then added to a new noise variable which causes multiplications to become partially opaque -- AA cannot understand the full result of a multiplication. This means any multiplication breaks $a - a = 0$ and adds noise. This noise causes us to increase the radius -- and if the lower limit is something like $0$ which is very special in multiplication we clearly get better results with interval arithmetic.
 
-This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fare a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and would give us a range poking out below $0$ while interval arithmetic would correctly infer the lower bound of $0$.
+This extra noise is particularly relevant when handling large expressions. Interval arithmetic can fare a lot better here since multiplication does not add noise in the same way. One very concrete example is if all variables in an expression like $\prod x_i$ are in the range $[0,n)$ -- affine arithmetic does not respect $0$ in the same way and will give us a range poking out below $0$ while interval arithmetic will correctly infer the lower bound of $0$.
 
 When concerned with estimating arithmetic expressions we can both get the pie and eat it. Since both interval arithmetic and affine arithmetic offer estimates which are guaranteed to hold all potential values, we can take the subset of the guesses and still keep correctness. The method of taking the smallest subset is referred to in this report as AAIA -- since we run both methods.
 
 \subsection{Opaqueness}
-When reasoning about expressions and languages with the use of programs one must simplify. One of these simplifications is to not expand everything to their most complex and detailed form and settle with an overestimation. One of these overestimations is referred to in this work as opaqueness. Opaqueness means we cannot see the inner workings of an expressions but are left with parts of the information about the values that can be held there. A source of opaqueness is reducing an AA-expression to a range, since we discard the relationship between variables and reduce it to just 2 numbers. Another source is the multiplication of AA-expressions where we introduce a new noise variable, but this opaqueness is only partial since we keep most of the information just some of it is diluted.
+When reasoning about expressions and languages with the use of programs one must simplify. One of these simplifications is to not expand everything to their most complex and detailed form and settle with an overestimation. One of these overestimations is referred to in this work as opaqueness. Opaqueness means we cannot see the inner workings of an expressions but are left with parts of the information about the values that can be held there. A source of opaqueness is reducing an AA-expression to a range, since we discard the relationship between variables and reduce it to just two numbers. Another source is the multiplication of AA-expressions where we introduce a new noise variable, but this opaqueness is only partial since we keep most of the information just some of it is diluted.
 
-Yet another example is the values passed to a function, where we are reduced to reasoning about the larger types and not the specific values. For example consider a function \verb+f+ that takes a boolean -- either \verb+true+ or \verb+false+ as an argument -- and returns an integer with range \verb+[0,50]+. Let us assume \verb+f+ is a pure function, thus we only have two possible return values. But the typesystem does not reason about the return type as a set of only 2 possible values, and to the typesystem the returned type is opaque since we cannot reason about the 2 possible values returned, we would need a set of possible values then like \verb+{0, 50}+ instead of a full range. This is another source of opaqueness that is perhaps more abstract but quite necessary.
+Yet another example is the values passed to a function, where we are reduced to reasoning about the larger types and not the specific values. For example consider a function \verb+f+ that takes a boolean -- either \verb+true+ or \verb+false+ as an argument -- and returns an integer with range \verb+[0,50]+. Let us assume \verb+f+ is a pure function, thus we only have two possible return values. But the typesystem does not reason about the return type as a set of only two possible values, and to the typesystem the returned type is opaque since we cannot reason about the two possible values returned, we will need a set of possible values then like \verb+{0, 50}+ instead of a full range. This is another source of opaqueness that is perhaps more abstract but quite necessary.
 
 \section{Field Programmable Gate Array}
 
 % NOTE[fs]: No an ASIC is designed and built in actual silicon. It is expoensive and final. FPGAs *unreadable* circuits using programmable logic
 % NOTE[et]: Unsure what to do with this, I also feel like this isn't as relevant to the rest of the work so I've put way less time on this section compared to other sections in the background. This may be bad since it's the area I feel you have the most experience.
 
-A field programmable gate array (FPGA) is a kind of application specific integrated circuit (ASIC) -- an FPGA is reprogrammable which is not generally the case for ASICs. An FPGA is slower and draws more power than a say{normal} circuit but FPGAs allow very fast iteration since they are programmable and are cheaper to produce in small volumes. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by configurable interconnections -- each component can then be programmed and connected individually. \cite{src:FPGA}
+A field programmable gate array (FPGA) is a kind of application-specific integrated circuit (ASIC) -- an FPGA is reprogrammable which is not generally the case for ASICs. An FPGA is slower and draws more power than a say{normal} circuit but FPGAs allow very fast iteration since they are programmable and are cheaper to produce in small volumes. This makes FPGAs ideal for prototyping hardware designs. An FPGA is made up of a grid of components all connected by configurable interconnections -- each component can then be programmed and connected individually. \cite{src:FPGA}
 
 An FPGA is very different from a general purpose computer or CPU which is what is mostly programmed by high-level languages. An FPGA is a circuit which means all steps are taken simultaneously -- this allows a large amount of parallel computations and makes FPGAs ideal for things like realtime signal processing -- which is why they see a lot of use in media processing and military applications \cite{src:FPGAApplications}. These physical limitations also put restrictions on the HDL. This is why variables are immutable in Spade.
 
 \subsection{Synthesis}
 % NOTE[fs]: I'd argue that synthesis is more than just boolean functions since it is typpically done from an HDL down to gates
 % NOTE[et]: I consider gates to be boolean functions, so I don't see your point here. I can rewrite this section since it is of more importance to the thesis than the definition of an FPGA. But if I understand FPGAs correctly. Maybe it's better to have a discussion about this.
-Synthesis is a step which tries to simplify the boolean functions that make up a logical circuit and in turn give out logical gates. This is done by analysing the expressions and solving a minimization problem. This process is usually deterministic and is a step that tries to allocate as few gates as possible to build a circuit. In the case of FPGAs synthesis maps the HDL design to the primitive circuits available in the FPGA. Primarily LUTs, but also dedicated block like multipliers and memories.
+Synthesis is a step which tries to simplify the boolean functions that make up a logical circuit and in turn give out logical gates. This is done by analysing the expressions and solving a minimization problem. This is a step that tries to allocate as few gates as possible to build a circuit. In the case of FPGAs synthesis maps the HDL design to the primitive circuits available in the FPGA. Primarily LUTs, but also dedicated blocks like multipliers and memories.
 
 \subsection{Place and Route}
-Place and Route, sometimes referred to as PNR in this work is when the program is encoded as hardware and happens after the synthesis step, which requires routing the information in the actual chip and deciding what node is responsible for what computation. This is similar to how the routes are placed on a say{normal} circuit and is considered a computationally hard problem. Since the problem of PNR is computationally hard, a stochastic algorithm is applied, meaning the same program may not generate identical encoded hardware. When trying to measure the resource usage of FPGA programs this step needs to be run multiple times, since one run could always be a fluke.
+Place-and-route, sometimes referred to as PNR in this work is when the program is encoded as hardware and happens after the synthesis step, which requires routing the information in the actual chip and deciding what node is responsible for what computation. This is similar to how the routes are placed on a say{normal} circuit and is considered a computationally hard problem. Since the problem of PNR is computationally hard, a stochastic algorithm is applied, meaning the same program may not generate identical encoded hardware. When trying to measure the resource usage of FPGA programs this step must be run multiple times, since one run can always be a fluke.
