@@ -195,7 +195,7 @@ fn main { add(add(1, 2), "abc") }
 ]
   \node {Tree for: \verb|fn main { add(add(1, 2), "abc") }|}
           child {node {fn main}
-              child {node {call:T2}
+              child {node {call: T2}
                     child {node[color=red] {add: Error\\Int is not Str}}
                     child {node[color=blue] {call: T1 = A0 = Int}
                         child {node[color=blue] {add: (A0, A0) -> A0\\where A0 = Int}}
@@ -477,7 +477,7 @@ Some of the rules for interval arithmetic are:
   \item $[a, b] + [c, d] = [a + c, b + d]$
 \end{enumerate}
 
-We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$. This mean we have the expression after expanding the variables which we can calculate:
+We will be using the expression $2x + z - z$ as an example where $x = [0, 1], z = [1, 3]$. This means we have the expression after expanding the variables which we can calculate:
 \begin{align*}
   2x + z - z \\
   =^{\text{expansion}} \quad & 2 \times [0, 1] + [1, 3] - [1, 3] \\

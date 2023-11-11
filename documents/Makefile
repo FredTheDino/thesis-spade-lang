@@ -2,6 +2,9 @@ all: affine-and-interval-arithmatic.pdf thesis.pdf
 
 .PHONY: all
 
+pres.pdf: pres.tex
+	tectonic --keep-intermediates -Z shell-escape --outfmt pdf $<
+
 %.pdf: %.md
 	pandoc -fmarkdown $< -tpdf -o $@
 
