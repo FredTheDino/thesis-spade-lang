@@ -19,11 +19,20 @@
 \usepackage{minted}
 \usepackage{cprotect}
 \usepackage[symbol]{footmisc}
+\usepackage{epigraph}
 
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
 \title{Wordlength inference in the Spade HDL}
-\subtitle{\say{Seven implementations of wordlength inference and one implementation that actually works}\\ or \say{A fishy situation}}
+\subtitle{Seven implementations of wordlength inference and one implementation that actually works\\
+          \textit{or} My thesis the picture book \\
+          \textit{or} Fish n' chips \\
+          \textit{or} \say{Nånting nånting, data data} \\
+          \textit{or} Ramblings of a strange man \\
+          \textit{or} A fishy situation \\
+          \textit{or} Too many subtitles \\
+          \textit{or} \say{Somebody stop meh} \\
+          }
 \author{Edvard Thörnros}
 \institute{Department of Electrical Engineering at Linköping University}
 \date{}
@@ -144,55 +153,59 @@ A breif look at compilers, typesystems and some basics in self validating numeri
 \end{figure}
 \end{frame}
 
-\begin{frame}
+\begin{frame}[containsverbatim]
+\frametitle{Spade Compiler Architecture Overview}
 \begin{figure}[h!]
   \includegraphics[width=\textwidth]{figures/architecture.png}
   \label{figArch}
 \end{figure}
+\footnotesize
+\verb"https://gitlab.com/spade-lang/spade/"
 \end{frame}
 
 \begin{frame}[containsverbatim]
 \frametitle{Basics About Parsing}
+
+\small
 \begin{minted}[]{bnf}
-<expr> ::= <num> | <expr> + <expr>
-
-<num>  ::= 1 | 2 | 3
+expr ::= num | expr + expr
+num  ::= 1 | 2 | 3
 \end{minted}
-\end{frame}
 
-\begin{frame}[containsverbatim]
-\frametitle{Basics About Parsing}
+\phantom{line}
+
+\begin{figure}[h!]
+  \centering
+  \begin{subfigure}{.6\textwidth}
 \begin{verbatim}
-  <expr> -> <expr> + <expr>
-         -> <expr> + <expr> + <expr>
-         -> <expr> + <expr> + <num>
-         -> <expr> + <expr> + 1
-         -> <expr> + <num> + 1
-         -> <expr> + 2 + 1
-         -> <num> + 2 + 1
-         -> 3 + 2 + 1
+expr -> expr + expr
+     -> expr + expr + expr
+     -> expr + expr + num
+     -> expr + expr + 1
+     -> expr + num + 1
+     -> expr + 2 + 1
+     -> num + 2 + 1
+     -> 3 + 2 + 1
 \end{verbatim}
-\end{frame}
+  \end{subfigure}%
+  \begin{subfigure}{.4\textwidth}
+    \begin{tikzpicture}[
+      sibling distance=2em,
+      level distance=2em,
+      every node/.style = {shape=rectangle, rounded corners, draw, align=center}
+    ]
+      \node {AST: 1 + 2 + 3}
+              child {node {+}
+                child {node {+}
+                  child {node {1}}
+                  child {node {2}}
+                }
+                child {node {3}}
+              };
+    \end{tikzpicture}
+  \end{subfigure}
+\end{figure}
 
-
-\begin{frame}[containsverbatim]
-\frametitle{Parse Trees}
-\large
-\centering
-\begin{tikzpicture}[
-  sibling distance=2em,
-  level distance=2em,
-  every node/.style = {shape=rectangle, rounded corners, draw, align=center}
-]
-  \node {Parse Tree For: 1 + 2 + 3}
-          child {node {+}
-            child {node {+}
-              child {node {1}}
-              child {node {2}}
-            }
-            child {node {3}}
-          };
-\end{tikzpicture}
 \end{frame}
 
 \subsection{Some Spade-Syntax}
@@ -227,9 +240,12 @@ fn generics<#A, #B, T>(x: int<A>, t: T) -> int<B> {
 \begin{frame}[containsverbatim]
 \frametitle{Nice Spade Properties}
 \begin{itemize}
-  \item Little mutable state (*)
+  \item Controlled mutable state
   \item No loops
-  \item Damas-Hindley-Milner
+  \item Damas-Hindley-Milner typeinference
+  \item Describes hardware
+  \item Compiles to Verilog
+  \item Expression based
 \end{itemize}
 \end{frame}
 
@@ -305,13 +321,14 @@ Questions about compilers or anything else?
 \end{frame}
 
 \begin{frame}[containsverbatim]
+\frametitle{Short Int. on Wordlength}
 \begin{block}{Wordlength}
 The number of bits a number takes in computer memory.
 \centering
 \begin{verbatim}
-trunc<4, 3>(sb1010) =   sb010 = 2
- sext<4, 5>(sb1010) = sb11010 = -6
- zext<4, 5>(sb1010) = sb01010 = 10
+  trunc<4, 3>(sb1010) =   sb010 = 2
+   sext<4, 5>(sb1010) = sb11010 = -6
+   zext<4, 5>(sb1010) = sb01010 = 10
 \end{verbatim}
 \end{block}
 \end{frame}
@@ -325,17 +342,20 @@ trunc<4, 3>(sb1010) =   sb010 = 2
 Keep track of lowest and highest point
 \end{block}
 
+\begin{center}
 \begin{enumerate}
   \item $n \times [a, b] = [n \times a, n \times b]$
   \item $[a, b] - [c, d] = [a - d, b - c])$
   \item $[a, b] + [c, d] = [a + c, b + d]$
 \end{enumerate}
+\end{center}
 \end{frame}
 
 \begin{frame}
 \frametitle{IA -- Interval Arithmetic, Example}
 
 Given $x = [0, 1], z = [1, 3]$
+\begin{center}
 \begin{align*}
   2x + z - z \\
   =^{\text{expansion}} \quad & 2 \times [0, 1] + [1, 3] - [1, 3] \\
@@ -345,6 +365,7 @@ Given $x = [0, 1], z = [1, 3]$
   =^{3}                \quad & [0 + -2, 2 + 4] \\
   =^{\text{simplify}}  \quad & [2, 4]
 \end{align*}
+\end{center}
 \end{frame}
 
 \begin{frame}
@@ -407,12 +428,15 @@ Given $x = [0, 1], z = [1, 3]$
 \begin{frame}
 \frametitle{What You Need To Know About FPGAs}
 
+
+\epigraph{FPGAs -- the software of hardware}{\textit{Edvard Thörnnros}}
+
 \begin{itemize}
   \item \say{Programmable hardware}
   \item Builds circuits so it makes sense to have a 5 bit integer
   \item Has to be layouted on a chip
   \item Syntehsis and place-and-route is nondeterministic
-  \item Uses lookup-tables (LUTs) for boolean functions
+  \item Uses lookup-tables (LUTs) for some boolean functions
   \item Used in cars and weapons 
 \end{itemize}
 \end{frame}
@@ -457,10 +481,10 @@ Given $x = [0, 1], z = [1, 3]$
 \frametitle{Construct Equations and SAT-solve Example}
 \begin{center}
 \begin{minted}[]{rust}
-fn f(a: int<4>) -> int<_> {
-  let b = a + 4;
-  a + b
-}
+            fn f(a: int<4>) -> int<_> {
+              let b = a + 4;
+              a + b
+            }
 \end{minted}
 \begin{tabular}{l c l c l}
  Definitions & & Equations & & IA Solved \\
@@ -570,8 +594,10 @@ entity main(clk: clock, rst: bool) -> int<14..14> {
 
 \begin{frame}[containsverbatim]
 \begin{center}
-\includegraphics[height=0.9\paperheight]{figures/meme.jpg}
+\includegraphics[height=.85\paperheight]{figures/meme.jpg}
 \end{center}
+\footnotesize
+\verb|"Superelmer", modified by me|
 \end{frame}
 
 \begin{frame}[containsverbatim]
@@ -602,7 +628,7 @@ entity main(clk: clock, rst: bool) -> int<14..14> {
 The return types for a simple FIR-filter test program where the wordlength inference method was varied.
 \end{frame}
 
-\section{Conclusions}
+\subsection{Conclusions}
 
 \begin{frame}[containsverbatim]
 \frametitle{Conclusions}
