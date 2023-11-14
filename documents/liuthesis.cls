@@ -759,7 +759,7 @@
 \fi
 
 \ifstudent
-\newcommand{\isrn}{LIU-\@departmentshort{}/\@area{}-EX-\@level{}-{}-\StrRight{\@publicationyear}{2}/\@currentyearthesisnumber-{}-SE}
+\newcommand{\isrn}{LIU-\@departmentshort{}/\@area{}-\@departmentshort{}-EX-\@level{}-{}-\StrRight{\@publicationyear}{2}/\@currentyearthesisnumber-{}-SE}
 \fi
 
 \newcommand\makeundergraduatetitle{%
@@ -1141,7 +1141,7 @@ refer to its www home page:
   \cleardoublepage
   {\pagestyle{plain}\tableofcontents\relax\cleardoublepage}
   % \iftotalfigures {\pagestyle{plain}\listoffigures\relax\cleardoublepage}\fi
-  \iftotaltables {\pagestyle{plain}\listoftables\relax\cleardoublepage}\fi
+  % \iftotaltables {\pagestyle{plain}\listoftables\relax\cleardoublepage}\fi
   \ifdef{\listoftodos}{\ifdefempty{\listoftodos}{}{\pagestyle{plain}\listoftodos\relax\cleardoublepage}}{}
   \ifprinterfriendly
     \cleartooddpage
